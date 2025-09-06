@@ -7,7 +7,7 @@ import ElegantStars from "../components/ElegantStars";
 import CleanText from "../components/CleanText";
 import { supabase } from "@/lib/supabaseClient";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend } from "chart.js";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, TooltipItem } from "chart.js";
 
 ChartJS.register(
   CategoryScale,
@@ -21,30 +21,73 @@ ChartJS.register(
   Legend
 );
 
+// type ChartTooltipContext = {
+//   dataset: {
+//     label: string;
+//   };
+//   parsed: {
+//     y: number;
+//   };
+//   label: string;
+// };
+
 type KasStatusRow = {
   status: boolean;
   minggu_kas: Array<{
     minggu: number;
     jumlah: number;
-  }>; // Mengubah ini kembali menjadi Array (non-nullable)
+  }>;
+};
+
+type TransaksiKas = {
+  jumlah: number;
+  deskripsi: string;
+  jenis: string; // 'pengeluaran' or 'pemasukan'
+};
+
+type MingguKas = {
+  id: string;
+  minggu: number;
+  jumlah: number;
+  created_at?: string; // Menambahkan ini karena kadang tidak semua field diambil
+};
+
+type Mahasiswa = {
+  id: string;
+  nama?: string; // Menambahkan ini karena kadang hanya ID yang diambil
+  nim?: string;
+};
+
+type KasStatusChart = {
+  status: boolean;
+  minggu_id: string;
+};
+
+type StatusBayarItem = {
+  status: boolean;
+  created_at: string;
+  minggu_kas: Array<{
+    minggu: number;
+    jumlah: number;
+  }>;
 };
 
 export default function CashPage() {
   const [pemasukanMingguIni, setPemasukanMingguIni] = useState(0);
   const [pengeluaranMingguIni, setPengeluaranMingguIni] = useState(0);
   const [saldoTotal, setSaldoTotal] = useState(0);
-  const [detailPengeluaran, setDetailPengeluaran] = useState<any[]>([]);
+  const [detailPengeluaran, setDetailPengeluaran] = useState<TransaksiKas[]>([]);
   const [showDetail, setShowDetail] = useState(false);
 
   const [nim, setNim] = useState("");
-  const [statusBayar, setStatusBayar] = useState<any[]>([]);
+  const [statusBayar, setStatusBayar] = useState<StatusBayarItem[]>([]);
   const [studentName, setStudentName] = useState<string | null>(null);
 
   // Data untuk charts
-  const [allMingguKas, setAllMingguKas] = useState<any[]>([]);
-  const [allTransaksiKas, setAllTransaksiKas] = useState<any[]>([]);
-  const [allMahasiswa, setAllMahasiswa] = useState<any[]>([]);
-  const [allKasStatusChart, setAllKasStatusChart] = useState<any[]>([]);
+  const [allMingguKas, setAllMingguKas] = useState<MingguKas[]>([]);
+  const [allTransaksiKas, setAllTransaksiKas] = useState<TransaksiKas[]>([]);
+  const [allMahasiswa, setAllMahasiswa] = useState<Mahasiswa[]>([]);
+  const [allKasStatusChart, setAllKasStatusChart] = useState<KasStatusChart[]>([]);
 
   const [navbarHeight, setNavbarHeight] = useState(0);
   const handleNavbarHeightChange = (height: number) => setNavbarHeight(height);
@@ -91,7 +134,7 @@ export default function CashPage() {
       // 3) Pengeluaran minggu ini + detail
       const { data: keluarMinggu, error: keluarMingguError } = await supabase
         .from("transaksi_kas")
-        .select("jumlah, deskripsi")
+        .select("jumlah, deskripsi, jenis")
         .eq("minggu_id", mingguId)
         .eq("jenis", "pengeluaran");
 
@@ -118,8 +161,7 @@ export default function CashPage() {
     //    mewakili satu pembayaran “jumlah” pada minggu tsb.
     const { data: paidStatusAll, error: paidStatusAllErr } = await supabase
       .from("kas_status")
-      .select("status, minggu_kas(minggu, jumlah)")
-      .eq("status", true);
+      .select("status, minggu_kas(minggu, jumlah)");
 
     // Catatan: jika ada event “pemasukan” manual di transaksi_kas, Anda bisa
     //          tambahkan juga ke perhitungan, tapi di desain ini kita asumsikan
@@ -163,7 +205,7 @@ export default function CashPage() {
 
     const { data: allTransaksiKasData, error: allTransaksiKasError } = await supabase
       .from("transaksi_kas")
-      .select("jumlah, jenis");
+      .select("jumlah, jenis, deskripsi");
     if (allTransaksiKasError) console.error("Error fetching all transaksi_kas:", allTransaksiKasError);
     setAllTransaksiKas(allTransaksiKasData || []);
 
@@ -262,7 +304,7 @@ export default function CashPage() {
       },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function(context: TooltipItem<"line">) {
             let label = context.dataset.label || '';
             if (label) {
                 label += ': ';
@@ -343,7 +385,7 @@ export default function CashPage() {
       },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function(context: TooltipItem<"bar">) {
             let label = context.dataset.label || '';
             if (label) {
                 label += ': ';
@@ -403,12 +445,12 @@ export default function CashPage() {
       },
       tooltip: {
         callbacks: {
-          label: function(context: any) {
+          label: function(context: TooltipItem<"doughnut">) {
             let label = context.label || '';
             if (label) {
                 label += ': ';
             }
-            if (context.parsed !== null) {
+            if (context.parsed !== null && typeof context.parsed === 'number') {
                 label += context.parsed + ' orang';
             }
             return label;
@@ -574,11 +616,11 @@ export default function CashPage() {
           )}
           <ul className="space-y-2 text-slate-300">
             {statusBayar.length > 0 ? (
-              statusBayar.map((item: any, i) => (
+              statusBayar.map((item: StatusBayarItem, i) => (
                 <li key={i} className="flex justify-between items-center bg-slate-700/40 p-3 rounded-md">
-                  <span className="font-medium">Minggu {item.minggu_kas.minggu}</span>
+                  <span className="font-medium">Minggu {item.minggu_kas[0].minggu}</span>
                   <span>
-                    {item.status ? "✅ Sudah Bayar" : "❌ Belum Bayar"} ({toCurrency(item.minggu_kas.jumlah)})
+                    {item.status ? "✅ Sudah Bayar" : "❌ Belum Bayar"} ({toCurrency(item.minggu_kas[0].jumlah)})
                   </span>
                 </li>
               ))

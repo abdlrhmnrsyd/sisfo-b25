@@ -3,6 +3,24 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+type Mahasiswa = {
+  id: string;
+  nim: string;
+  nama: string;
+};
+
+type MingguKas = {
+  id: string;
+  minggu: number;
+  jumlah: number;
+};
+
+type KasStatus = {
+  mahasiswa_id: string;
+  minggu_id: string;
+  status: boolean;
+};
+
 export default function AdminCashPage() {
   const [nim, setNim] = useState("");
   const [nama, setNama] = useState("");
@@ -10,9 +28,9 @@ export default function AdminCashPage() {
   const [jumlah, setJumlah] = useState(0);
   const [deskripsi, setDeskripsi] = useState("");
   const [keluar, setKeluar] = useState(0);
-  const [mahasiswa, setMahasiswa] = useState<any[]>([]);
-  const [mingguKas, setMingguKas] = useState<any[]>([]);
-  const [kasStatus, setKasStatus] = useState<any[]>([]);
+  const [mahasiswa, setMahasiswa] = useState<Mahasiswa[]>([]);
+  const [mingguKas, setMingguKas] = useState<MingguKas[]>([]);
+  const [kasStatus, setKasStatus] = useState<KasStatus[]>([]);
 
   useEffect(() => {
     fetchData();

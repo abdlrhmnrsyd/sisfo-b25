@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { supabase } from "@/lib/supabaseClient";
@@ -124,14 +124,14 @@ export default function DashboardPage() {
     return h * 60 + m;
   };
 
-  const isClassActive = (jadwalItem: Jadwal) => {
+  const isClassActive = useCallback((jadwalItem: Jadwal) => {
     if (!mounted || currentDayName.toLowerCase() !== jadwalItem.hari.toLowerCase()) return false;
     
     const classStart = toMinutes(jadwalItem.jam_mulai);
     const classEnd = toMinutes(jadwalItem.jam_selesai);
     
     return nowTimeInMinutes >= classStart && nowTimeInMinutes <= classEnd;
-  };
+  }, [mounted, currentDayName, nowTimeInMinutes, toMinutes]);
 
   const { nextClass, timeUntilNextClass, currentClass } = useMemo(() => {
     if (!mounted) return { nextClass: null as Jadwal | null, timeUntilNextClass: "", currentClass: null as Jadwal | null };
