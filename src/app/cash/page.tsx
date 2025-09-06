@@ -7,7 +7,7 @@ import ElegantStars from "../components/ElegantStars";
 import CleanText from "../components/CleanText";
 import { supabase } from "@/lib/supabaseClient";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, TooltipItem } from "chart.js";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, TooltipItem, Filler } from "chart.js";
 
 ChartJS.register(
   CategoryScale,
@@ -18,7 +18,8 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 // type ChartTooltipContext = {
@@ -74,7 +75,7 @@ type StatusBayarItem = {
 
 export default function CashPage() {
   const [pemasukanMingguIni, setPemasukanMingguIni] = useState(0);
-  const [pengeluaranMingguIni, setPengeluaranMingguIni] = useState(0);
+  const [totalPengeluaran, setTotalPengeluaran] = useState(0);
   const [saldoTotal, setSaldoTotal] = useState(0);
   const [detailPengeluaran, setDetailPengeluaran] = useState<TransaksiKas[]>([]);
   const [showDetail, setShowDetail] = useState(false);
@@ -103,12 +104,11 @@ export default function CashPage() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(1);
+    console.log("Supabase - minggu_kas data:", minggu);
+    console.log("Supabase - minggu_kas error:", mingguError);
 
     if (mingguError || !minggu?.length) {
       console.error("Error fetch minggu_kas:", mingguError);
-      setPemasukanMingguIni(0);
-      setPengeluaranMingguIni(0);
-      setDetailPengeluaran([]);
       // saldo dihitung di bawah tetap (all time) — lanjut
     }
 
@@ -122,6 +122,8 @@ export default function CashPage() {
         .from("kas_status")
         .select("status")
         .eq("minggu_id", mingguId);
+    console.log("Supabase - kas_status (this week) data:", statusThisWeek);
+    console.log("Supabase - kas_status (this week) error:", statusError);
 
       if (statusError) {
         console.error("Error fetch kas_status minggu ini:", statusError);
@@ -130,56 +132,44 @@ export default function CashPage() {
         const paidCount = statusThisWeek?.filter((s) => s.status === true).length ?? 0;
         setPemasukanMingguIni(paidCount * jumlahPerMinggu);
       }
+    }
 
-      // 3) Pengeluaran minggu ini + detail
-      const { data: keluarMinggu, error: keluarMingguError } = await supabase
-        .from("transaksi_kas")
-        .select("jumlah, deskripsi, jenis")
-        .eq("minggu_id", mingguId)
-        .eq("jenis", "pengeluaran");
+    // 3) Total Pengeluaran (all time) dan detail
+    const { data: keluarAll, error: keluarAllError } = await supabase
+      .from("transaksi_kas")
+      .select("jumlah, deskripsi, jenis")
+      .eq("jenis", "pengeluaran");
+    console.log("Supabase - transaksi_kas (all pengeluaran) data:", keluarAll);
+    console.log("Supabase - transaksi_kas (all pengeluaran) error:", keluarAllError);
 
-      if (keluarMingguError) {
-        console.error("Error fetch pengeluaran minggu ini:", keluarMingguError);
-        setPengeluaranMingguIni(0);
-        setDetailPengeluaran([]);
-      } else {
-        const totalPengeluaranMinggu =
-          keluarMinggu?.reduce((sum, item) => sum + (item.jumlah ?? 0), 0) ?? 0;
-        setPengeluaranMingguIni(totalPengeluaranMinggu);
-        setDetailPengeluaran(keluarMinggu || []);
-      }
-    } else {
-      // Tidak ada minggu aktif
-      setPemasukanMingguIni(0);
-      setPengeluaranMingguIni(0);
+    if (keluarAllError) {
+      console.error("Error fetch all pengeluaran:", keluarAllError);
+      setTotalPengeluaran(0);
       setDetailPengeluaran([]);
+    } else {
+      const totalPengeluaranComputed =
+        keluarAll?.reduce((sum, item) => sum + (item.jumlah ?? 0), 0) ?? 0;
+      setTotalPengeluaran(totalPengeluaranComputed);
+      setDetailPengeluaran(keluarAll || []);
     }
 
     // 4) SALDO (ALL TIME) — FIXED:
     //    Total pemasukan all time = sum(minggu_kas.jumlah) untuk SETIAP baris kas_status
-    //    yang status=true (dibayar). Karena unique (mahasiswa_id, minggu_id), tiap paid row
+    //    yang status=true (dibayar). Karena unique (mahasisw-id, minggu_id), tiap paid row
     //    mewakili satu pembayaran “jumlah” pada minggu tsb.
     const { data: paidStatusAll, error: paidStatusAllErr } = await supabase
       .from("kas_status")
-      .select("status, minggu_kas(minggu, jumlah)");
+      .select("status, minggu_kas(minggu, jumlah)")
+      .eq("status", true);
+    console.log("Supabase - kas_status (paid all) data:", paidStatusAll);
+    console.log("Supabase - kas_status (paid all) error:", paidStatusAllErr);
 
     // Catatan: jika ada event “pemasukan” manual di transaksi_kas, Anda bisa
     //          tambahkan juga ke perhitungan, tapi di desain ini kita asumsikan
     //          pemasukan hanya dari pembayaran mahasiswa (kas_status).
 
-    // 5) Total pengeluaran all time dari transaksi_kas
-    const { data: pengeluaranAll, error: pengeluaranAllErr } = await supabase
-      .from("transaksi_kas")
-      .select("jumlah")
-      .eq("jenis", "pengeluaran");
-
     if (paidStatusAllErr) {
       console.error("Error fetch all paid status:", paidStatusAllErr);
-      setSaldoTotal(0);
-      return;
-    }
-    if (pengeluaranAllErr) {
-      console.error("Error fetch all pengeluaran:", pengeluaranAllErr);
       setSaldoTotal(0);
       return;
     }
@@ -190,34 +180,42 @@ export default function CashPage() {
         return sum + j;
       }, 0) ?? 0;
 
-    const totalPengeluaranAll =
-      pengeluaranAll?.reduce((sum, t) => sum + (t.jumlah ?? 0), 0) ?? 0;
-
-    setSaldoTotal(totalPemasukanAll - totalPengeluaranAll);
+    console.log("Total Pemasukan All:", totalPemasukanAll);
+    console.log("Total Pengeluaran:", totalPengeluaran);
+    setSaldoTotal(totalPemasukanAll - totalPengeluaran);
+    console.log("Saldo Total:", totalPemasukanAll - totalPengeluaran);
 
     // ===== Data untuk Charts =====
     const { data: allMingguKasData, error: allMingguKasError } = await supabase
       .from("minggu_kas")
       .select("*")
       .order("minggu", { ascending: true });
+    console.log("Supabase - allMingguKas data:", allMingguKasData);
+    console.log("Supabase - allMingguKas error:", allMingguKasError);
     if (allMingguKasError) console.error("Error fetching all minggu_kas:", allMingguKasError);
     setAllMingguKas(allMingguKasData || []);
 
     const { data: allTransaksiKasData, error: allTransaksiKasError } = await supabase
       .from("transaksi_kas")
       .select("jumlah, jenis, deskripsi");
+    console.log("Supabase - allTransaksiKas data:", allTransaksiKasData);
+    console.log("Supabase - allTransaksiKas error:", allTransaksiKasError);
     if (allTransaksiKasError) console.error("Error fetching all transaksi_kas:", allTransaksiKasError);
     setAllTransaksiKas(allTransaksiKasData || []);
 
     const { data: allMahasiswaData, error: allMahasiswaError } = await supabase
       .from("mahasiswa")
       .select("id"); // Hanya butuh ID untuk count
+    console.log("Supabase - allMahasiswa data:", allMahasiswaData);
+    console.log("Supabase - allMahasiswa error:", allMahasiswaError);
     if (allMahasiswaError) console.error("Error fetching all mahasiswa:", allMahasiswaError);
     setAllMahasiswa(allMahasiswaData || []);
 
     const { data: allKasStatusChartData, error: allKasStatusChartError } = await supabase
       .from("kas_status")
       .select("status, minggu_id"); // Menambahkan minggu_id di sini
+    console.log("Supabase - allKasStatusChart data:", allKasStatusChartData);
+    console.log("Supabase - allKasStatusChart error:", allKasStatusChartError);
     if (allKasStatusChartError) console.error("Error fetching all kas_status for chart:", allKasStatusChartError);
     setAllKasStatusChart(allKasStatusChartData || []);
   };
@@ -506,9 +504,9 @@ export default function CashPage() {
             onClick={() => setShowDetail(!showDetail)}
           >
             <div className="absolute inset-0 bg-red-500/5 blur-3xl rounded-full" />
-            <CleanText size="text-lg" className="mb-2 text-red-200 relative z-10">Pengeluaran Minggu Ini</CleanText>
+            <CleanText size="text-lg" className="mb-2 text-red-200 relative z-10">Total Pengeluaran</CleanText>
             <CleanText size="text-3xl" className="font-bold text-red-100 relative z-10">
-              {toCurrency(pengeluaranMingguIni)}
+              {toCurrency(totalPengeluaran)}
             </CleanText>
             <p className="text-sm text-red-300 mt-2 relative z-10">
               {showDetail ? "Klik sembunyikan" : "Klik lihat detail"}
@@ -534,7 +532,7 @@ export default function CashPage() {
             transition={{ duration: 0.3 }}
             className="p-6 border rounded-xl bg-slate-800/60 border-slate-700/50 max-w-4xl w-full mb-12"
           >
-            <CleanText size="text-xl" className="font-bold mb-4 text-white">Detail Pengeluaran Minggu Ini</CleanText>
+            <CleanText size="text-xl" className="font-bold mb-4 text-white">Detail Pengeluaran</CleanText>
             {detailPengeluaran.length === 0 ? (
               <div className="text-slate-400">Belum ada pengeluaran minggu ini.</div>
             ) : (
@@ -618,9 +616,9 @@ export default function CashPage() {
             {statusBayar.length > 0 ? (
               statusBayar.map((item: StatusBayarItem, i) => (
                 <li key={i} className="flex justify-between items-center bg-slate-700/40 p-3 rounded-md">
-                  <span className="font-medium">Minggu {item.minggu_kas[0].minggu}</span>
+                  <span className="font-medium">Minggu {item.minggu_kas?.[0]?.minggu ?? 'N/A'}</span>
                   <span>
-                    {item.status ? "✅ Sudah Bayar" : "❌ Belum Bayar"} ({toCurrency(item.minggu_kas[0].jumlah)})
+                    {item.status ? "✅ Sudah Bayar" : "❌ Belum Bayar"} ({toCurrency(item.minggu_kas?.[0]?.jumlah ?? 0)})
                   </span>
                 </li>
               ))
