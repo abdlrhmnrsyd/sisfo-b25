@@ -179,7 +179,7 @@ export default function CashPage() {
     }
 
     const totalPemasukanAll =
-      (paidStatusAll as any[] | null)?.reduce((sum, row) => {
+      (paidStatusAll as Array<{ minggu_kas: { minggu: number; jumlah: number } }> | null)?.reduce((sum, row) => {
         const j = row?.minggu_kas?.jumlah ?? 0; // Mengakses objek langsung, bukan array
         return sum + j;
       }, 0) ?? 0;
