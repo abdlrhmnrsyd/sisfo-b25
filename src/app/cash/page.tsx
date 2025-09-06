@@ -179,8 +179,8 @@ export default function CashPage() {
     }
 
     
-    const totalPemasukanAll = paidStatusAll?.reduce((sum: number, row: any) => {
-      const j = row?.minggu_kas?.jumlah ?? 0; // Mengakses objek langsung
+    const totalPemasukanAll = paidStatusAll?.reduce((sum: number, row: { minggu_kas: { minggu: number; jumlah: number }[] }) => {
+      const j = row?.minggu_kas?.[0]?.jumlah ?? 0; // Mengakses array, ambil elemen pertama
       return sum + j;
     }, 0) ?? 0;
 
