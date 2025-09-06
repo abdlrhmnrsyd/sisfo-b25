@@ -178,11 +178,11 @@ export default function CashPage() {
       return;
     }
 
-    const totalPemasukanAll =
-      (paidStatusAll as Array<{ minggu_kas: { minggu: number; jumlah: number } }> | null)?.reduce((sum, row) => {
-        const j = row?.minggu_kas?.jumlah ?? 0; // Mengakses objek langsung, bukan array
-        return sum + j;
-      }, 0) ?? 0;
+    
+    const totalPemasukanAll = paidStatusAll?.reduce((sum: number, row: any) => {
+      const j = row?.minggu_kas?.jumlah ?? 0; // Mengakses objek langsung
+      return sum + j;
+    }, 0) ?? 0;
 
     // Hitung ulang total pengeluaran untuk perhitungan saldo
     const totalPengeluaranForSaldo = 
