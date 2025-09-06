@@ -119,10 +119,10 @@ export default function DashboardPage() {
     ? currentTime.getHours() * 60 + currentTime.getMinutes()
     : 0;
 
-  const toMinutes = (t: string) => {
+  const toMinutes = useCallback((t: string) => {
     const [h, m] = t.slice(0, 5).split(":").map(Number);
     return h * 60 + m;
-  };
+  }, []);
 
   const isClassActive = useCallback((jadwalItem: Jadwal) => {
     if (!mounted || currentDayName.toLowerCase() !== jadwalItem.hari.toLowerCase()) return false;
