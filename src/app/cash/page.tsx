@@ -34,16 +34,17 @@ ChartJS.register(
 
 type KasStatusRow = {
   status: boolean;
-  minggu_kas: Array<{
+  minggu_kas: {
     minggu: number;
     jumlah: number;
-  }>;
+  };
 };
 
 type TransaksiKas = {
   jumlah: number;
   deskripsi: string;
   jenis: string; // 'pengeluaran' or 'pemasukan'
+  created_at?: string;
 };
 
 type MingguKas = {
@@ -67,10 +68,10 @@ type KasStatusChart = {
 type StatusBayarItem = {
   status: boolean;
   created_at: string;
-  minggu_kas: Array<{
+  minggu_kas: {
     minggu: number;
     jumlah: number;
-  }>;
+  };
 };
 
 export default function CashPage() {
@@ -137,8 +138,9 @@ export default function CashPage() {
     // 3) Total Pengeluaran (all time) dan detail
     const { data: keluarAll, error: keluarAllError } = await supabase
       .from("transaksi_kas")
-      .select("jumlah, deskripsi, jenis")
-      .eq("jenis", "pengeluaran");
+      .select("jumlah, deskripsi, jenis, created_at")
+      .eq("jenis", "pengeluaran")
+      .order("created_at", { ascending: false });
     console.log("Supabase - transaksi_kas (all pengeluaran) data:", keluarAll);
     console.log("Supabase - transaksi_kas (all pengeluaran) error:", keluarAllError);
 
@@ -149,6 +151,8 @@ export default function CashPage() {
     } else {
       const totalPengeluaranComputed =
         keluarAll?.reduce((sum, item) => sum + (item.jumlah ?? 0), 0) ?? 0;
+      console.log("Data pengeluaran:", keluarAll);
+      console.log("Total pengeluaran computed:", totalPengeluaranComputed);
       setTotalPengeluaran(totalPengeluaranComputed);
       setDetailPengeluaran(keluarAll || []);
     }
@@ -175,15 +179,20 @@ export default function CashPage() {
     }
 
     const totalPemasukanAll =
-      (paidStatusAll as KasStatusRow[] | null)?.reduce((sum, row) => {
-        const j = row?.minggu_kas?.[0]?.jumlah ?? 0; // Mengakses elemen pertama dari array
+      (paidStatusAll as any[] | null)?.reduce((sum, row) => {
+        const j = row?.minggu_kas?.jumlah ?? 0; // Mengakses objek langsung, bukan array
         return sum + j;
       }, 0) ?? 0;
 
+    // Hitung ulang total pengeluaran untuk perhitungan saldo
+    const totalPengeluaranForSaldo = 
+      keluarAll?.reduce((sum, item) => sum + (item.jumlah ?? 0), 0) ?? 0;
+
     console.log("Total Pemasukan All:", totalPemasukanAll);
-    console.log("Total Pengeluaran:", totalPengeluaran);
-    setSaldoTotal(totalPemasukanAll - totalPengeluaran);
-    console.log("Saldo Total:", totalPemasukanAll - totalPengeluaran);
+    console.log("Total Pengeluaran (state):", totalPengeluaran);
+    console.log("Total Pengeluaran (recalculated):", totalPengeluaranForSaldo);
+    console.log("Saldo yang akan dihitung:", totalPemasukanAll - totalPengeluaranForSaldo);
+    setSaldoTotal(totalPemasukanAll - totalPengeluaranForSaldo);
 
     // ===== Data untuk Charts =====
     const { data: allMingguKasData, error: allMingguKasError } = await supabase
@@ -251,14 +260,17 @@ export default function CashPage() {
       .eq("mahasiswa_id", mhs.id)
       .order("created_at");
 
-      // console.log("Supabase - kas_status data for NIM check:", data);
-
     if (error) {
       console.error("Error cek pembayaran:", error);
       return;
     }
 
-    setStatusBayar(data || []);
+    // Transform data to match StatusBayarItem type
+    const transformedData = (data || []).map(item => ({
+      ...item,
+      minggu_kas: Array.isArray(item.minggu_kas) ? item.minggu_kas[0] : item.minggu_kas
+    }));
+    setStatusBayar(transformedData);
   };
 
   // ===== Data untuk Chart 1: Uang kas dari minggu ke minggu (Total Pemasukan Aktual) =====
@@ -541,7 +553,18 @@ export default function CashPage() {
               <ul className="space-y-2 text-slate-300">
                 {detailPengeluaran.map((item, i) => (
                   <li key={i} className="flex justify-between items-center bg-slate-700/40 p-3 rounded-md">
-                    <span className="font-medium">{item.deskripsi}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.deskripsi}</span>
+                      <span className="text-xs text-slate-400">
+                        {item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Tanggal tidak tersedia'}
+                      </span>
+                    </div>
                     <span className="font-bold">{toCurrency(item.jumlah)}</span>
                   </li>
                 ))}
@@ -618,9 +641,9 @@ export default function CashPage() {
             {statusBayar.length > 0 ? (
               statusBayar.map((item: StatusBayarItem, i) => (
                 <li key={i} className="flex justify-between items-center bg-slate-700/40 p-3 rounded-md">
-                  <span className="font-medium">Minggu {item.minggu_kas?.[0]?.minggu ?? 'N/A'}</span>
+                  <span className="font-medium">Minggu {item.minggu_kas?.minggu ?? 'N/A'}</span>
                   <span>
-                    {item.status ? "✅ Sudah Bayar" : "❌ Belum Bayar"} ({toCurrency(item.minggu_kas?.[0]?.jumlah ?? 0)})
+                    {item.status ? "✅ Sudah Bayar" : "❌ Belum Bayar"} ({toCurrency(item.minggu_kas?.jumlah ?? 0)})
                   </span>
                 </li>
               ))
