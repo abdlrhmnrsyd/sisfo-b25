@@ -48,10 +48,18 @@ export default function AdminCashPage() {
   };
 
   const addMahasiswa = async () => {
-    await supabase.from("mahasiswa").insert([{ nim, nama }]);
+    const { data: newMahasiswa } = await supabase.from("mahasiswa").insert([{ nim, nama }]).select();
     fetchData();
     setNim("");
     setNama("");
+    if (newMahasiswa && newMahasiswa.length > 0) {
+      const newMhsId = newMahasiswa[0].id;
+      for (const mk of mingguKas) {
+        await supabase.from("kas_status").insert([
+          { mahasiswa_id: newMhsId, minggu_id: mk.id, status: false },
+        ]);
+      }
+    }
   };
 
   const addMingguKas = async () => {

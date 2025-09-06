@@ -248,8 +248,10 @@ export default function CashPage() {
     const { data, error } = await supabase
       .from("kas_status")
       .select("status, created_at, minggu_kas(minggu, jumlah)")
-      .eq("mahasiswa_id", mhs.id) // Perbaikan typo di sini
+      .eq("mahasiswa_id", mhs.id)
       .order("created_at");
+
+      // console.log("Supabase - kas_status data for NIM check:", data);
 
     if (error) {
       console.error("Error cek pembayaran:", error);
