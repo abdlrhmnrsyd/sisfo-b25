@@ -22,8 +22,8 @@ export default function AdminTaskPage() {
     note: "",
   });
 
-  const [isAdding, setIsAdding] = useState(false); // State untuk mengontrol tampilan form
-  const [editingTugasId, setEditingTugasId] = useState<string | null>(null); // State untuk melacak ID tugas yang sedang diedit
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingTugasId, setEditingTugasId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTugas();
@@ -43,7 +43,7 @@ export default function AdminTaskPage() {
     if (!error) {
       fetchTugas();
       setForm({ matakuliah: "", dosen: "", tugas: "", deadline: "", note: "" });
-      setIsAdding(false); // Sembunyikan form setelah menambah
+      setIsAdding(false);
     }
   };
 
@@ -58,7 +58,7 @@ export default function AdminTaskPage() {
         note: taskToEdit.note || "",
       });
       setEditingTugasId(id);
-      setIsAdding(true); // Tampilkan form saat mengedit
+      setIsAdding(true);
     }
   };
 
@@ -74,14 +74,14 @@ export default function AdminTaskPage() {
       fetchTugas();
       setForm({ matakuliah: "", dosen: "", tugas: "", deadline: "", note: "" });
       setEditingTugasId(null);
-      setIsAdding(false); // Sembunyikan form setelah update
+      setIsAdding(false);
     }
   };
 
   const handleCancelEdit = () => {
     setForm({ matakuliah: "", dosen: "", tugas: "", deadline: "", note: "" });
     setEditingTugasId(null);
-    setIsAdding(false); // Sembunyikan form
+    setIsAdding(false);
   };
 
   const handleDelete = async (id: string) => {

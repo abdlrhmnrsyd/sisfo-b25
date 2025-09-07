@@ -39,9 +39,7 @@ export default function DashboardPage() {
 
   const fetchTugas = async () => {
     const { data, error } = await supabase.from("tugas").select("*");
-    if (error) {
-      console.error("Error fetching tugas:", error);
-    } else {
+    if (!error) {
       setTugas(data || []);
     }
   };
@@ -49,9 +47,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchJadwal = async () => {
       const { data, error } = await supabase.from("jadwal").select("*");
-      if (error) {
-        console.error("Error fetching jadwal:", error);
-      } else {
+      if (!error) {
         setJadwal(data || []);
       }
     };
@@ -64,11 +60,7 @@ export default function DashboardPage() {
     const deleteExpiredTasks = async () => {
       const now = new Date();
       const { data: tasks, error } = await supabase.from("tugas").select("id, deadline");
-
-      if (error) {
-        console.error("Error fetching tasks for deletion:", error);
-        return;
-      }
+      if (error) return;
 
       if (tasks && tasks.length > 0) {
         const expiredTaskIds = tasks
@@ -80,17 +72,13 @@ export default function DashboardPage() {
           .map(task => task.id);
 
         if (expiredTaskIds.length > 0) {
-          console.log("Deleting expired tasks:", expiredTaskIds);
           const { error: deleteError } = await supabase
             .from("tugas")
             .delete()
             .in("id", expiredTaskIds);
 
-          if (deleteError) {
-            console.error("Error deleting expired tasks:", deleteError);
-          } else {
-            console.log("Expired tasks deleted successfully.");
-            fetchTugas(); // Refresh the list after deletion
+          if (!deleteError) {
+            fetchTugas();
           }
         }
       }

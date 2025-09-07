@@ -15,7 +15,7 @@ const navLinks = [
   { name: "Dashboard", href: "/" },
   { name: "Jadwal", href: "/schedule" },
   { name: "Tugas", href: "/task" },
-  { name: "Uang Kas", href: "/cash" }, // New link for Uang Kas
+  { name: "Uang Kas", href: "/cash" },
 ];
 
 const Navbar = ({ onHeightChange }: NavbarProps) => {
@@ -27,7 +27,6 @@ const Navbar = ({ onHeightChange }: NavbarProps) => {
     if (navRef.current && onHeightChange) {
       const observer = new ResizeObserver(entries => {
         for (const entry of entries) {
-          console.log("Navbar height detected:", entry.contentRect.height);
           onHeightChange(entry.contentRect.height);
         }
       });

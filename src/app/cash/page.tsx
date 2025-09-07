@@ -22,15 +22,6 @@ ChartJS.register(
   Filler
 );
 
-// type ChartTooltipContext = {
-//   dataset: {
-//     label: string;
-//   };
-//   parsed: {
-//     y: number;
-//   };
-//   label: string;
-// };
 
 type KasStatusRow = {
   status: boolean;
@@ -43,7 +34,7 @@ type KasStatusRow = {
 type TransaksiKas = {
   jumlah: number;
   deskripsi: string;
-  jenis: string; // 'pengeluaran' or 'pemasukan'
+  jenis: string;
   created_at?: string;
 };
 
@@ -51,12 +42,12 @@ type MingguKas = {
   id: string;
   minggu: number;
   jumlah: number;
-  created_at?: string; // Menambahkan ini karena kadang tidak semua field diambil
+  created_at?: string;
 };
 
 type Mahasiswa = {
   id: string;
-  nama?: string; // Menambahkan ini karena kadang hanya ID yang diambil
+  nama?: string;
   nim?: string;
 };
 
@@ -105,8 +96,6 @@ export default function CashPage() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(1);
-    console.log("Supabase - minggu_kas data:", minggu);
-    console.log("Supabase - minggu_kas error:", mingguError);
 
     if (mingguError || !minggu?.length) {
       console.error("Error fetch minggu_kas:", mingguError);
@@ -117,14 +106,11 @@ export default function CashPage() {
     const mingguId = mingguAktif?.id;
     const jumlahPerMinggu = mingguAktif?.jumlah ?? 0;
 
-    // 2) Pemasukan minggu ini = jumlahPerMinggu * (count kas_status true untuk minggu aktif)
     if (mingguId) {
       const { data: statusThisWeek, error: statusError } = await supabase
         .from("kas_status")
         .select("status")
         .eq("minggu_id", mingguId);
-    console.log("Supabase - kas_status (this week) data:", statusThisWeek);
-    console.log("Supabase - kas_status (this week) error:", statusError);
 
       if (statusError) {
         console.error("Error fetch kas_status minggu ini:", statusError);
@@ -135,42 +121,26 @@ export default function CashPage() {
       }
     }
 
-    // 3) Total Pengeluaran (all time) dan detail
     const { data: keluarAll, error: keluarAllError } = await supabase
       .from("transaksi_kas")
       .select("jumlah, deskripsi, jenis, created_at")
       .eq("jenis", "pengeluaran")
       .order("created_at", { ascending: false });
-    console.log("Supabase - transaksi_kas (all pengeluaran) data:", keluarAll);
-    console.log("Supabase - transaksi_kas (all pengeluaran) error:", keluarAllError);
 
     if (keluarAllError) {
       console.error("Error fetch all pengeluaran:", keluarAllError);
       setTotalPengeluaran(0);
       setDetailPengeluaran([]);
     } else {
-      const totalPengeluaranComputed =
-        keluarAll?.reduce((sum, item) => sum + (item.jumlah ?? 0), 0) ?? 0;
-      console.log("Data pengeluaran:", keluarAll);
-      console.log("Total pengeluaran computed:", totalPengeluaranComputed);
+      const totalPengeluaranComputed = keluarAll?.reduce((sum, item) => sum + (item.jumlah ?? 0), 0) ?? 0;
       setTotalPengeluaran(totalPengeluaranComputed);
       setDetailPengeluaran(keluarAll || []);
     }
 
-    // 4) SALDO (ALL TIME) — FIXED:
-    //    Total pemasukan all time = sum(minggu_kas.jumlah) untuk SETIAP baris kas_status
-    //    yang status=true (dibayar). Karena unique (mahasisw-id, minggu_id), tiap paid row
-    //    mewakili satu pembayaran “jumlah” pada minggu tsb.
     const { data: paidStatusAll, error: paidStatusAllErr } = await supabase
       .from("kas_status")
       .select("status, minggu_kas(minggu, jumlah)")
       .eq("status", true);
-    console.log("Supabase - kas_status (paid all) data:", paidStatusAll);
-    console.log("Supabase - kas_status (paid all) error:", paidStatusAllErr);
-
-    // Catatan: jika ada event “pemasukan” manual di transaksi_kas, Anda bisa
-    //          tambahkan juga ke perhitungan, tapi di desain ini kita asumsikan
-    //          pemasukan hanya dari pembayaran mahasiswa (kas_status).
 
     if (paidStatusAllErr) {
       console.error("Error fetch all paid status:", paidStatusAllErr);
@@ -187,47 +157,32 @@ export default function CashPage() {
       return sum + jumlahMinggu;
     }, 0) ?? 0;
 
-    // Hitung ulang total pengeluaran untuk perhitungan saldo
     const totalPengeluaranForSaldo = 
       keluarAll?.reduce((sum, item) => sum + (item.jumlah ?? 0), 0) ?? 0;
-
-    console.log("Total Pemasukan All:", totalPemasukanAll);
-    console.log("Total Pengeluaran (state):", totalPengeluaran);
-    console.log("Total Pengeluaran (recalculated):", totalPengeluaranForSaldo);
-    console.log("Saldo yang akan dihitung:", totalPemasukanAll - totalPengeluaranForSaldo);
     setSaldoTotal(totalPemasukanAll - totalPengeluaranForSaldo);
 
-    // ===== Data untuk Charts =====
     const { data: allMingguKasData, error: allMingguKasError } = await supabase
       .from("minggu_kas")
       .select("*")
       .order("minggu", { ascending: true });
-    console.log("Supabase - allMingguKas data:", allMingguKasData);
-    console.log("Supabase - allMingguKas error:", allMingguKasError);
     if (allMingguKasError) console.error("Error fetching all minggu_kas:", allMingguKasError);
     setAllMingguKas(allMingguKasData || []);
 
     const { data: allTransaksiKasData, error: allTransaksiKasError } = await supabase
       .from("transaksi_kas")
       .select("jumlah, jenis, deskripsi");
-    console.log("Supabase - allTransaksiKas data:", allTransaksiKasData);
-    console.log("Supabase - allTransaksiKas error:", allTransaksiKasError);
     if (allTransaksiKasError) console.error("Error fetching all transaksi_kas:", allTransaksiKasError);
     setAllTransaksiKas(allTransaksiKasData || []);
 
     const { data: allMahasiswaData, error: allMahasiswaError } = await supabase
       .from("mahasiswa")
-      .select("id"); // Hanya butuh ID untuk count
-    console.log("Supabase - allMahasiswa data:", allMahasiswaData);
-    console.log("Supabase - allMahasiswa error:", allMahasiswaError);
+      .select("id");
     if (allMahasiswaError) console.error("Error fetching all mahasiswa:", allMahasiswaError);
     setAllMahasiswa(allMahasiswaData || []);
 
     const { data: allKasStatusChartData, error: allKasStatusChartError } = await supabase
       .from("kas_status")
-      .select("status, minggu_id"); // Menambahkan minggu_id di sini
-    console.log("Supabase - allKasStatusChart data:", allKasStatusChartData);
-    console.log("Supabase - allKasStatusChart error:", allKasStatusChartError);
+      .select("status, minggu_id");
     if (allKasStatusChartError) console.error("Error fetching all kas_status for chart:", allKasStatusChartError);
     setAllKasStatusChart(allKasStatusChartData || []);
   };
@@ -236,7 +191,6 @@ export default function CashPage() {
     fetchSummary();
   }, []);
 
-  // ===== Cek pembayaran berdasarkan NIM =====
   const handleCekPembayaran = async () => {
     const nimTrim = nim.trim();
     if (!nimTrim) return;
@@ -268,7 +222,6 @@ export default function CashPage() {
       return;
     }
 
-    // Transform data to match StatusBayarItem type
     const transformedData = (data || []).map(item => ({
       ...item,
       minggu_kas: Array.isArray(item.minggu_kas) ? item.minggu_kas[0] : item.minggu_kas
@@ -276,9 +229,7 @@ export default function CashPage() {
     setStatusBayar(transformedData);
   };
 
-  // ===== Data untuk Chart 1: Uang kas dari minggu ke minggu (Total Pemasukan Aktual) =====
   const chartMingguKasData = useMemo(() => {
-    // Pastikan allMingguKas diurutkan berdasarkan minggu untuk tampilan chart yang benar
     const sortedMingguKas = [...allMingguKas].sort((a, b) => a.minggu - b.minggu);
 
     const labels = sortedMingguKas.map((mk) => `Minggu ${mk.minggu}`);
@@ -286,7 +237,7 @@ export default function CashPage() {
       const paidCount = allKasStatusChart.filter(
         (statusEntry) => statusEntry.minggu_id === mk.id && statusEntry.status === true
       ).length;
-      return paidCount * (mk.jumlah ?? 0); // Total pemasukan aktual
+      return paidCount * (mk.jumlah ?? 0);
     });
 
     return {
@@ -344,9 +295,7 @@ export default function CashPage() {
     }
   };
 
-  // ===== Data untuk Chart 2: Uang Keluar dan Total Saldo =====
   const chartSaldoData = useMemo(() => {
-    // Calculate total actual income from all paid statuses
     const totalActualIncome = allKasStatusChart.reduce((sum, statusEntry) => {
       if (statusEntry.status) {
         const minggu = allMingguKas.find(mk => mk.id === statusEntry.minggu_id);
@@ -368,9 +317,9 @@ export default function CashPage() {
           label: "Jumlah",
           data: [totalActualIncome, totalPengeluaranAllTime, currentSaldo],
           backgroundColor: [
-            "rgba(75, 192, 192, 0.6)", // Pemasukan
-            "rgba(255, 99, 132, 0.6)", // Pengeluaran
-            "rgba(54, 162, 235, 0.6)", // Saldo
+            "rgba(75, 192, 192, 0.6)",
+            "rgba(255, 99, 132, 0.6)",
+            "rgba(54, 162, 235, 0.6)",
           ],
           borderColor: [
             "rgba(75, 192, 192, 1)",

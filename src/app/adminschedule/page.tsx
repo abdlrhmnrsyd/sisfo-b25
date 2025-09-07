@@ -38,13 +38,11 @@ export default function AdminPage() {
     };
 
     if (editId) {
-      // UPDATE data
       const { error } = await supabase.from("jadwal").update(payload).eq("id", editId);
-      if (error) console.error("Update error:", error.message);
+      
     } else {
-      // INSERT data baru
       const { error } = await supabase.from("jadwal").insert([payload]);
-      if (error) console.error("Insert error:", error.message);
+      
     }
 
     setForm({ hari: "", matkul: "", dosen: "", lokasi: "", jam_mulai: "", jam_selesai: "" });
@@ -64,7 +62,7 @@ export default function AdminPage() {
       matkul: j.matkul,
       dosen: j.dosen,
       lokasi: j.lokasi,
-      jam_mulai: j.jam_mulai.slice(0, 5), // ambil HH:MM
+      jam_mulai: j.jam_mulai.slice(0, 5),
       jam_selesai: j.jam_selesai.slice(0, 5),
     });
   };

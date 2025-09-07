@@ -193,7 +193,7 @@ export default function AdminCashPage() {
             <span className="text-sm text-gray-500">Total Mahasiswa: {mahasiswa.length}</span>
           </div>
           <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full w-max text-sm">
               <thead className="bg-gray-100/80 text-gray-900 sticky top-0 z-10">
                 <tr>
                   <th className="px-3 py-3 text-left font-semibold border-b border-gray-200 w-28 md:w-32 sticky left-0 bg-gray-100/80 backdrop-blur-sm">NIM</th>

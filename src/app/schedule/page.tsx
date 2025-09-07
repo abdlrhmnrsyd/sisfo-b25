@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 // Import supabase client (keeping original data connection)
 import { supabase } from "@/lib/supabaseClient";
 import Navbar from "../components/Navbar";
-import ClientOnly from "../components/ClientOnly"; // Import ClientOnly
-import CleanText from "../components/CleanText"; // Import CleanText
-import ElegantStars from "../components/ElegantStars"; // Import ElegantStars
+import ClientOnly from "../components/ClientOnly";
+import CleanText from "../components/CleanText";
+import ElegantStars from "../components/ElegantStars";
 
 type Jadwal = {
   id: number;
