@@ -620,7 +620,7 @@ export default function CashPage() {
           <CleanText size="text-xl" className="font-bold mb-4 text-white">🔍 Cek Pembayaran Kas</CleanText>
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <input
-              type="text"
+              type="number"
               placeholder="Masukkan NIM Anda"
               value={nim}
               onChange={(e) => setNim(e.target.value)}
