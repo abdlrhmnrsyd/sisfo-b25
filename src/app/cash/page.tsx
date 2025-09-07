@@ -179,9 +179,12 @@ export default function CashPage() {
     }
 
     
-    const totalPemasukanAll = paidStatusAll?.reduce((sum: number, row: { minggu_kas: { minggu: number; jumlah: number }[] }) => {
-      const j = row?.minggu_kas?.[0]?.jumlah ?? 0; // Mengakses array, ambil elemen pertama
-      return sum + j;
+    const totalPemasukanAll = paidStatusAll?.reduce((sum: number, row: any) => {
+      const mingguKas = row?.minggu_kas;
+      const jumlahMinggu = Array.isArray(mingguKas)
+        ? (mingguKas?.[0]?.jumlah ?? 0)
+        : (mingguKas?.jumlah ?? 0);
+      return sum + jumlahMinggu;
     }, 0) ?? 0;
 
     // Hitung ulang total pengeluaran untuk perhitungan saldo
