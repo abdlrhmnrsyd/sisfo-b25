@@ -583,7 +583,7 @@ export default function DashboardPage() {
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-3">
                           <span className={`text-xs font-medium uppercase tracking-wide px-3 py-1 rounded-lg ${badgeColor}`}>
-                            {t.matakuliah}
+                            {index + 1}. {t.matakuliah}
                           </span>
                           <span className={`text-xs ${deadlineColor}`}>
                             Deadline: {new Date(t.deadline).toLocaleDateString("id-ID", {
@@ -604,8 +604,13 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <h3 className={`text-xl font-medium mb-2 leading-tight ${textColor}`}>
-                          {t.tugas}
+                          Tugas:
                         </h3>
+                        <ol className="list-decimal list-inside text-white ml-4 mb-3">
+                          {t.tugas.split('\n').map((item, i) => (
+                            <li key={i} className="font-light mb-1">{item.trim()}</li>
+                          ))}
+                        </ol>
                         <p className={`text-sm ${deadlineColor} mb-3`}>Dosen: {t.dosen}</p>
                         {t.note && (
                           <div className="mt-4 pt-4 border-t border-slate-700">
