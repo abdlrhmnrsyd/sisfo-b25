@@ -78,6 +78,9 @@ export default function CashPage() {
   const [authorized, setAuthorized] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [authChecking, setAuthChecking] = useState(false);
+  const [showQris, setShowQris] = useState(false);
+  const [qrisForWeek, setQrisForWeek] = useState<number | null>(null);
+  const QRIS_URL = "/tes.jpg"; // ganti ke "/qris.png" jika Anda menambahkan file QRIS
 
   // Data untuk charts
   const [allMingguKas, setAllMingguKas] = useState<MingguKas[]>([]);
@@ -88,8 +91,27 @@ export default function CashPage() {
   const [navbarHeight, setNavbarHeight] = useState(0);
   const handleNavbarHeightChange = (height: number) => setNavbarHeight(height);
 
+  // Cookie helpers
+  const setCookie = (name: string, value: string, days: number) => {
+    const date = new Date();
+    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+    const expires = `; expires=${date.toUTCString()}`;
+    document.cookie = `${name}=${encodeURIComponent(value || "")}${expires}; path=/`;
+  };
+  const getCookie = (name: string) => {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split("; ");
+    for (let i = 0; i < ca.length; i++) {
+      const c = ca[i];
+      if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length));
+    }
+    return null;
+  };
+
   const toCurrency = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
+  const toCompact = (n: number) =>
+    new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(n);
 
   // ===== Ambil summary kas =====
   const fetchSummary = async () => {
@@ -196,29 +218,45 @@ export default function CashPage() {
     }
   }, [authorized]);
 
+  // Auto authorize via cookie on mount
+  useEffect(() => {
+    const savedNim = getCookie("nim");
+    if (savedNim && !authorized) {
+      setNim(savedNim);
+      void authorizeByNim(savedNim, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleAuthorize = async () => {
     const nimTrim = nim.trim();
     if (!nimTrim) {
       setAuthError("Silakan masukkan NIM terlebih dahulu.");
       return;
     }
+    await authorizeByNim(nimTrim, false);
+  };
+
+  const authorizeByNim = async (nimStr: string, silent: boolean) => {
     setAuthChecking(true);
-    setAuthError(null);
+    if (!silent) setAuthError(null);
     try {
       const { data: mhs, error: mhsError } = await supabase
         .from("mahasiswa")
         .select("id, nama")
-        .eq("nim", nimTrim)
+        .eq("nim", nimStr)
         .single();
 
       if (mhsError || !mhs) {
-        setAuthError("Anda bukan siswa TRPL 1B.");
+        if (!silent) setAuthError("Anda bukan siswa TRPL 1B.");
         setAuthorized(false);
         return;
       }
 
+      setNim(nimStr);
       setStudentName(mhs.nama ?? null);
       setAuthorized(true);
+      setCookie("nim", nimStr, 7);
       // Setelah otorisasi berhasil, langsung tampilkan hasil cek pembayaran
       await handleCekPembayaran();
     } finally {
@@ -233,8 +271,13 @@ export default function CashPage() {
   };
 
   const handleCekPembayaran = async () => {
-    const nimTrim = nim.trim();
-    if (!nimTrim) return;
+    let nimTrim = nim.trim();
+    if (!nimTrim) {
+      const cookieNim = getCookie("nim");
+      if (!cookieNim) return;
+      nimTrim = cookieNim.trim();
+      setNim(nimTrim);
+    }
 
     setStudentName(null);
     setStatusBayar([]);
@@ -268,6 +311,11 @@ export default function CashPage() {
       minggu_kas: Array.isArray(item.minggu_kas) ? item.minggu_kas[0] : item.minggu_kas
     }));
     setStatusBayar(transformedData);
+  };
+
+  const handleShowQris = (weekNumber: number) => {
+    setQrisForWeek(weekNumber);
+    setShowQris(true);
   };
 
   const chartMingguKasData = useMemo(() => {
@@ -335,6 +383,7 @@ export default function CashPage() {
       }
     }
   };
+  
 
   const chartSaldoData = useMemo(() => {
     const totalActualIncome = allKasStatusChart.reduce((sum, statusEntry) => {
@@ -374,46 +423,8 @@ export default function CashPage() {
   }, [allTransaksiKas, allKasStatusChart, allMingguKas]);
 
 
-  const chartSaldoOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top" as const,
-        labels: {
-          color: 'white',
-        },
-      },
-      title: {
-        display: true,
-        text: "Ringkasan Keuangan",
-        color: 'white',
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context: TooltipItem<"bar">) {
-            let label = context.dataset.label || '';
-            if (label) {
-                label += ': ';
-            }
-            if (context.parsed.y !== null) {
-                label += toCurrency(context.parsed.y);
-            }
-            return label;
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        ticks: { color: 'white' },
-        grid: { color: 'rgba(255, 255, 255, 0.1)' }
-      },
-      y: {
-        ticks: { color: 'white' },
-        grid: { color: 'rgba(255, 255, 255, 0.1)' }
-      }
-    }
-  };
+  // Dummy object not used anymore (kept for compatibility but without types)
+  const chartSaldoOptions = {} as const;
 
   // ===== Data untuk Chart 3: Berapa orang yang bayar dan berapa orang yang belum =====
   const chartStatusBayarData = useMemo(() => {
@@ -434,36 +445,7 @@ export default function CashPage() {
     };
   }, [allMahasiswa, allKasStatusChart]);
 
-  const chartStatusBayarOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top" as const,
-        labels: {
-          color: 'white',
-        },
-      },
-      title: {
-        display: true,
-        text: "Status Pembayaran Mahasiswa",
-        color: 'white',
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context: TooltipItem<"doughnut">) {
-            let label = context.label || '';
-            if (label) {
-                label += ': ';
-            }
-            if (context.parsed !== null && typeof context.parsed === 'number') {
-                label += context.parsed + ' orang';
-            }
-            return label;
-          }
-        }
-      }
-    }
-  };
+  const chartStatusBayarOptions = {} as const;
 
   if (!authorized) {
     return (
@@ -603,9 +585,21 @@ export default function CashPage() {
                           <div className="text-xs text-slate-400">Nominal {toCurrency(item.minggu_kas?.jumlah ?? 0)}</div>
                         </div>
                       </div>
-                      <span className={`${item.status ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-600/20 text-rose-300 border-rose-500/30'} px-3 py-1 rounded-full text-xs border` }>
-                        {item.status ? 'Sudah Bayar' : 'Belum Bayar'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {!item.status && (
+                          <motion.button
+                            onClick={() => handleShowQris(item.minggu_kas?.minggu ?? 0)}
+                            className="px-3 py-1.5 rounded-lg text-xs bg-fuchsia-600 text-white hover:bg-fuchsia-700 transition-colors"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Tampilkan QRIS
+                          </motion.button>
+                        )}
+                        <span className={`${item.status ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-600/20 text-rose-300 border-rose-500/30'} px-3 py-1 rounded-full text-xs border` }>
+                          {item.status ? 'Sudah Bayar' : 'Belum Bayar'}
+                        </span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -618,16 +612,46 @@ export default function CashPage() {
           </div>
         </motion.div>
 
+        {/* Modal QRIS */}
+        {showQris && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setShowQris(false)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative z-10 w-[90%] max-w-md p-5 rounded-2xl bg-slate-900 border border-slate-700 text-left"
+            >
+              <div className="mb-3">
+                <CleanText size="text-lg" className="text-white">QRIS Pembayaran {qrisForWeek ? `- Minggu ${qrisForWeek}` : ''}</CleanText>
+                <div className="text-xs text-slate-400">Scan QR untuk membayar kas</div>
+              </div>
+              <div className="rounded-xl overflow-hidden bg-slate-800 border border-slate-700 mb-4 grid place-items-center">
+                <img src={QRIS_URL} alt="QRIS" className="w-full max-w-xs object-contain" />
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <motion.button
+                  onClick={() => setShowQris(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Tutup
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {/* Summary */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full mb-12"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full mb-12"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
         >
           {/* Pemasukan minggu ini */}
-          <div className="p-6 bg-green-900/30 rounded-xl shadow-lg border border-green-700/40 relative overflow-hidden">
-            <div className="absolute inset-0 bg-green-500/5 blur-3xl rounded-full" />
+          <div className="p-6 bg-slate-900/60 rounded-xl shadow-xl border border-green-700/40 relative overflow-hidden hover:shadow-green-900/20 hover:scale-[1.01] transition-transform">
+            <div className="absolute -inset-1 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl blur-2xl" />
             <CleanText size="text-lg" className="mb-2 text-green-200 relative z-10">Pemasukan Minggu Ini</CleanText>
             <CleanText size="text-3xl" className="font-bold text-green-100 relative z-10">
               {toCurrency(pemasukanMingguIni)}
@@ -636,10 +660,10 @@ export default function CashPage() {
 
           {/* Pengeluaran minggu ini */}
           <div
-            className="p-6 bg-red-900/30 rounded-xl shadow-lg border border-red-700/40 cursor-pointer relative overflow-hidden"
+            className="p-6 bg-slate-900/60 rounded-xl shadow-xl border border-red-700/40 cursor-pointer relative overflow-hidden hover:shadow-rose-900/20 hover:scale-[1.01] transition-transform"
             onClick={() => setShowDetail(!showDetail)}
           >
-            <div className="absolute inset-0 bg-red-500/5 blur-3xl rounded-full" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-rose-500/10 to-orange-500/10 rounded-2xl blur-2xl" />
             <CleanText size="text-lg" className="mb-2 text-red-200 relative z-10">Total Pengeluaran</CleanText>
             <CleanText size="text-3xl" className="font-bold text-red-100 relative z-10">
               {toCurrency(totalPengeluaran)}
@@ -650,8 +674,8 @@ export default function CashPage() {
           </div>
 
           {/* Saldo total */}
-          <div className="p-6 bg-blue-900/30 rounded-xl shadow-lg border border-blue-700/40 relative overflow-hidden">
-            <div className="absolute inset-0 bg-blue-500/5 blur-3xl rounded-full" />
+          <div className="p-6 bg-slate-900/60 rounded-xl shadow-xl border border-blue-700/40 relative overflow-hidden hover:shadow-blue-900/20 hover:scale-[1.01] transition-transform">
+            <div className="absolute -inset-1 bg-gradient-to-r from-sky-500/10 to-indigo-500/10 rounded-2xl blur-2xl" />
             <CleanText size="text-lg" className="mb-2 text-blue-200 relative z-10">Saldo Kas</CleanText>
             <CleanText size="text-3xl" className="font-bold text-blue-100 relative z-10">
               {toCurrency(saldoTotal)}
@@ -666,17 +690,22 @@ export default function CashPage() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="p-6 border rounded-xl bg-slate-800/60 border-slate-700/50 max-w-4xl w-full mb-12"
+            className="p-6 border rounded-2xl bg-slate-900/60 border-slate-700/60 max-w-4xl w-full mb-12"
           >
-            <CleanText size="text-xl" className="font-bold mb-4 text-white">Detail Pengeluaran</CleanText>
+            <div className="flex items-center justify-between mb-4">
+              <CleanText size="text-xl" className="font-bold text-white">Detail Pengeluaran</CleanText>
+              <span className="text-xs px-2 py-1 rounded-full bg-rose-600/20 text-rose-300 border border-rose-500/30">
+                {detailPengeluaran.length} item
+              </span>
+            </div>
             {detailPengeluaran.length === 0 ? (
-              <div className="text-slate-400">Belum ada pengeluaran minggu ini.</div>
+              <div className="text-slate-400 p-6 rounded-lg bg-slate-800/50 border border-slate-700/60">Belum ada pengeluaran minggu ini.</div>
             ) : (
               <ul className="space-y-2 text-slate-300">
                 {detailPengeluaran.map((item, i) => (
-                  <li key={i} className="flex justify-between items-center bg-slate-700/40 p-3 rounded-md">
-                    <div className="flex flex-col">
-                      <span className="font-medium">{item.deskripsi}</span>
+                  <li key={i} className="flex justify-between items-center bg-slate-800/60 border border-slate-700/60 p-3 rounded-lg">
+                    <div className="flex flex-col text-left">
+                      <span className="font-medium text-white">{item.deskripsi}</span>
                       <span className="text-xs text-slate-400">
                         {item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', {
                           day: '2-digit',
@@ -687,7 +716,7 @@ export default function CashPage() {
                         }) : 'Tanggal tidak tersedia'}
                       </span>
                     </div>
-                    <span className="font-bold">{toCurrency(item.jumlah)}</span>
+                    <span className="font-bold text-rose-200">{toCurrency(item.jumlah)}</span>
                   </li>
                 ))}
               </ul>
@@ -702,8 +731,9 @@ export default function CashPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="p-6 bg-slate-800/60 rounded-xl shadow-lg border border-slate-700/50"
+            className="relative p-6 bg-slate-900/60 rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden"
           >
+            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 rounded-2xl blur-2xl" />
             <Line data={chartMingguKasData} options={chartMingguKasOptions} />
           </motion.div>
 
@@ -712,8 +742,9 @@ export default function CashPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="p-6 bg-slate-800/60 rounded-xl shadow-lg border border-slate-700/50"
+            className="relative p-6 bg-slate-900/60 rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden"
           >
+            <div className="absolute -inset-1 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 rounded-2xl blur-2xl" />
             <Bar data={chartSaldoData} options={chartSaldoOptions} />
           </motion.div>
 
@@ -722,8 +753,9 @@ export default function CashPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="p-6 bg-slate-800/60 rounded-xl shadow-lg border border-slate-700/50"
+            className="relative p-6 bg-slate-900/60 rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden"
           >
+            <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/10 to-pink-500/10 rounded-2xl blur-2xl" />
             <Doughnut data={chartStatusBayarData} options={chartStatusBayarOptions} />
           </motion.div>
         </div>
