@@ -75,6 +75,9 @@ export default function CashPage() {
   const [nim, setNim] = useState("");
   const [statusBayar, setStatusBayar] = useState<StatusBayarItem[]>([]);
   const [studentName, setStudentName] = useState<string | null>(null);
+  const [authorized, setAuthorized] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authChecking, setAuthChecking] = useState(false);
 
   // Data untuk charts
   const [allMingguKas, setAllMingguKas] = useState<MingguKas[]>([]);
@@ -188,8 +191,46 @@ export default function CashPage() {
   };
 
   useEffect(() => {
-    fetchSummary();
-  }, []);
+    if (authorized) {
+      fetchSummary();
+    }
+  }, [authorized]);
+
+  const handleAuthorize = async () => {
+    const nimTrim = nim.trim();
+    if (!nimTrim) {
+      setAuthError("Silakan masukkan NIM terlebih dahulu.");
+      return;
+    }
+    setAuthChecking(true);
+    setAuthError(null);
+    try {
+      const { data: mhs, error: mhsError } = await supabase
+        .from("mahasiswa")
+        .select("id, nama")
+        .eq("nim", nimTrim)
+        .single();
+
+      if (mhsError || !mhs) {
+        setAuthError("Anda bukan siswa TRPL 1B.");
+        setAuthorized(false);
+        return;
+      }
+
+      setStudentName(mhs.nama ?? null);
+      setAuthorized(true);
+      // Setelah otorisasi berhasil, langsung tampilkan hasil cek pembayaran
+      await handleCekPembayaran();
+    } finally {
+      setAuthChecking(false);
+    }
+  };
+
+  const handleAuthorizeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      void handleAuthorize();
+    }
+  };
 
   const handleCekPembayaran = async () => {
     const nimTrim = nim.trim();
@@ -424,6 +465,63 @@ export default function CashPage() {
     }
   };
 
+  if (!authorized) {
+    return (
+      <div className="min-h-screen relative overflow-hidden bg-slate-950">
+        <ElegantStars />
+        <Navbar onHeightChange={handleNavbarHeightChange} />
+        <main
+          className="relative z-10 p-6 md:p-8 flex flex-col items-center justify-center text-center min-h-screen"
+          style={{ paddingTop: navbarHeight || 128 }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full max-w-md"
+          >
+            <div className="p-6 rounded-xl bg-slate-900/70 border border-slate-700/60">
+              <div className="mb-4 text-left">
+                <CleanText size="text-xl" className="text-white">Masuk dengan NIM</CleanText>
+                <div className="text-sm text-slate-400">Akses Uang Kas TRPL 1B</div>
+              </div>
+
+              <div className="flex flex-col gap-3 text-left">
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Masukkan NIM"
+                  value={nim}
+                  onChange={(e) => setNim(e.target.value.replace(/\D/g, ""))}
+                  onKeyDown={handleAuthorizeKeyDown}
+                  className="px-4 py-3 w-full rounded-lg bg-slate-800/80 text-white placeholder-slate-400 border border-slate-700 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 outline-none transition-all"
+                  autoFocus
+                />
+
+                {authError && (
+                  <div className="text-red-400 text-sm">{authError}</div>
+                )}
+
+                <motion.button
+                  onClick={handleAuthorize}
+                  className="inline-flex items-center justify-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-60"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={authChecking}
+                >
+                  {authChecking && (
+                    <span className="inline-block h-4 w-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {authChecking ? "Memeriksa..." : "Masuk"}
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-950">
       <ElegantStars />
@@ -446,6 +544,78 @@ export default function CashPage() {
           <CleanText size="text-xl md:text-2xl" className="text-purple-300">
             Manajemen Keuangan Kelas
           </CleanText>
+        </motion.div>
+
+        {/* Cek Pembayaran - dipindah ke atas dan auto terisi setelah otorisasi */}
+        <motion.div
+          className="relative max-w-4xl w-full mb-12"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600/50 to-fuchsia-600/50 rounded-2xl blur opacity-30" />
+          <div className="relative p-6 rounded-2xl bg-slate-900/60 border border-slate-700/60">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 grid place-items-center">🔎</div>
+                <div>
+                  <CleanText size="text-xl" className="text-white">Cek Pembayaran Kas</CleanText>
+                  <div className="text-xs text-slate-400">Status pembayaran per minggu</div>
+                </div>
+              </div>
+              {studentName && (
+                <div className="px-3 py-1 rounded-full text-sm bg-purple-600/20 border border-purple-500/30 text-purple-200">
+                  {studentName}
+                </div>
+              )}
+            </div>
+
+            {/* Ringkasan singkat */}
+            {statusBayar.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 text-left">
+                <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-700/60">
+                  <div className="text-xs text-slate-400">Total Minggu</div>
+                  <div className="text-white text-lg font-semibold">{statusBayar.length}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-700/60">
+                  <div className="text-xs text-slate-400">Sudah Bayar</div>
+                  <div className="text-emerald-300 text-lg font-semibold">{statusBayar.filter(s => s.status).length}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-800/60 border border-slate-700/60 col-span-2 md:col-span-1">
+                  <div className="text-xs text-slate-400">Total Dibayar</div>
+                  <div className="text-white text-lg font-semibold">
+                    {toCurrency(statusBayar.filter(s => s.status).reduce((sum, s) => sum + (s.minggu_kas?.jumlah ?? 0), 0))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Daftar status */}
+            <div className="text-left">
+              {statusBayar.length > 0 ? (
+                <ul className="divide-y divide-slate-700/60 rounded-lg overflow-hidden border border-slate-700/60">
+                  {statusBayar.map((item: StatusBayarItem, i) => (
+                    <li key={i} className="flex items-center justify-between gap-3 bg-slate-800/40 px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-700/60 grid place-items-center text-slate-300">#{item.minggu_kas?.minggu ?? '–'}</div>
+                        <div>
+                          <div className="text-white font-medium">Minggu {item.minggu_kas?.minggu ?? 'N/A'}</div>
+                          <div className="text-xs text-slate-400">Nominal {toCurrency(item.minggu_kas?.jumlah ?? 0)}</div>
+                        </div>
+                      </div>
+                      <span className={`${item.status ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-600/20 text-rose-300 border-rose-500/30'} px-3 py-1 rounded-full text-xs border` }>
+                        {item.status ? 'Sudah Bayar' : 'Belum Bayar'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="p-6 rounded-lg bg-slate-800/50 border border-slate-700/60 text-slate-300">
+                  Belum ada data pembayaran untuk ditampilkan.
+                </div>
+              )}
+            </div>
+          </div>
         </motion.div>
 
         {/* Summary */}
@@ -559,55 +729,7 @@ export default function CashPage() {
         </div>
 
 
-        {/* Cek Pembayaran */}
-        <motion.div
-          className="p-6 bg-slate-800/60 rounded-xl border border-slate-700/50 max-w-4xl w-full mb-12"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <CleanText size="text-xl" className="font-bold mb-4 text-white">🔍 Cek Pembayaran Kas</CleanText>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <input
-              type="number"
-              placeholder="Masukkan NIM Anda"
-              value={nim}
-              onChange={(e) => setNim(e.target.value)}
-              className="border p-3 rounded-lg w-full bg-slate-900 text-white border-slate-700 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
-            />
-            <motion.button
-              onClick={handleCekPembayaran}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Cek Pembayaran
-            </motion.button>
-          </div>
-          {studentName && (
-            <CleanText size="text-lg" className="text-purple-300 mb-4">
-              Nama Mahasiswa: {studentName}
-            </CleanText>
-          )}
-          <ul className="space-y-2 text-slate-300">
-            {statusBayar.length > 0 ? (
-              statusBayar.map((item: StatusBayarItem, i) => (
-                <li key={i} className="flex justify-between items-center bg-slate-700/40 p-3 rounded-md">
-                  <span className="font-medium">Minggu {item.minggu_kas?.minggu ?? 'N/A'}</span>
-                  <span>
-                    {item.status ? "✅ Sudah Bayar" : "❌ Belum Bayar"} ({toCurrency(item.minggu_kas?.jumlah ?? 0)})
-                  </span>
-                </li>
-              ))
-            ) : (
-              nim && (
-                <CleanText size="text-sm" className="text-slate-400">
-                  Masukkan NIM untuk melihat status pembayaran Anda.
-                </CleanText>
-              )
-            )}
-          </ul>
-        </motion.div>
+        {/* Cek Pembayaran dipindah ke atas */}
 
         {/* Footer */}
         <motion.div
