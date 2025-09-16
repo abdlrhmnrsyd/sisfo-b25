@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Create transaction (Snap) in Midtrans
-    const transaction = await midtransSnapServer.createTransaction(parameter as any);
+    const transaction = await midtransSnapServer.createTransaction(parameter);
     const transactionToken = transaction.token;
 
     // Save transaction to database

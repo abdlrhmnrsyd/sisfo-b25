@@ -2,7 +2,7 @@
  * Utility functions for API calls
  */
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   success: boolean;
@@ -11,7 +11,7 @@ export interface ApiResponse<T = any> {
 /**
  * Safely parse JSON response with proper error handling
  */
-export async function safeJsonParse<T = any>(response: Response): Promise<ApiResponse<T>> {
+export async function safeJsonParse<T = unknown>(response: Response): Promise<ApiResponse<T>> {
   try {
     // Check if response is ok
     if (!response.ok) {
@@ -61,7 +61,7 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
 /**
  * Make a safe API call with proper error handling
  */
-export async function safeApiCall<T = any>(
+export async function safeApiCall<T = unknown>(
   url: string, 
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
