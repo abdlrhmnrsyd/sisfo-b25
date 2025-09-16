@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import ElegantStars from "../components/ElegantStars";
 import CleanText from "../components/CleanText";
+import PaymentModal from "../components/PaymentModal";
 import { supabase } from "@/lib/supabaseClient";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, TooltipItem, Filler } from "chart.js";
@@ -59,6 +60,7 @@ type KasStatusChart = {
 type StatusBayarItem = {
   status: boolean;
   created_at: string;
+  minggu_id: string;
   minggu_kas: {
     minggu: number;
     jumlah: number;
@@ -73,6 +75,7 @@ export default function CashPage() {
   const [showDetail, setShowDetail] = useState(false);
 
   const [nim, setNim] = useState("");
+  const [mahasiswaId, setMahasiswaId] = useState<string | null>(null);
   const [statusBayar, setStatusBayar] = useState<StatusBayarItem[]>([]);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [authorized, setAuthorized] = useState(false);
@@ -80,6 +83,12 @@ export default function CashPage() {
   const [authChecking, setAuthChecking] = useState(false);
   const [showQris, setShowQris] = useState(false);
   const [qrisForWeek, setQrisForWeek] = useState<number | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentWeek, setSelectedPaymentWeek] = useState<{
+    minggu: number;
+    amount: number;
+    mingguId: string;
+  } | null>(null);
   const QRIS_URL = "/tes.jpg"; // ganti ke "/qris.png" jika Anda menambahkan file QRIS
 
   // Data untuk charts
@@ -255,6 +264,7 @@ export default function CashPage() {
 
       setNim(nimStr);
       setStudentName(mhs.nama ?? null);
+      setMahasiswaId(mhs.id);
       setAuthorized(true);
       setCookie("nim", nimStr, 7);
       // Setelah otorisasi berhasil, langsung tampilkan hasil cek pembayaran
@@ -294,10 +304,11 @@ export default function CashPage() {
     }
 
     setStudentName(mhs.nama);
+    setMahasiswaId(mhs.id);
 
     const { data, error } = await supabase
       .from("kas_status")
-      .select("status, created_at, minggu_kas(minggu, jumlah)")
+      .select("status, created_at, minggu_id, minggu_kas(minggu, jumlah)")
       .eq("mahasiswa_id", mhs.id)
       .order("created_at");
 
@@ -316,6 +327,19 @@ export default function CashPage() {
   const handleShowQris = (weekNumber: number) => {
     setQrisForWeek(weekNumber);
     setShowQris(true);
+  };
+
+  const handlePayment = (weekNumber: number, amount: number, mingguId: string) => {
+    setSelectedPaymentWeek({ minggu: weekNumber, amount, mingguId });
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    setSelectedPaymentWeek(null);
+    // Refresh payment status
+    handleCekPembayaran();
+    fetchSummary();
   };
 
   const chartMingguKasData = useMemo(() => {
@@ -550,6 +574,7 @@ export default function CashPage() {
                   {studentName}
                 </div>
               )}
+
             </div>
 
             {/* Ringkasan singkat */}
@@ -587,14 +612,21 @@ export default function CashPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {!item.status && (
-                          <motion.button
-                            onClick={() => handleShowQris(item.minggu_kas?.minggu ?? 0)}
-                            className="px-3 py-1.5 rounded-lg text-xs bg-fuchsia-600 text-white hover:bg-fuchsia-700 transition-colors"
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            Tampilkan QRIS
-                          </motion.button>
+                          <>
+                            <motion.button
+                              onClick={() => handlePayment(
+                                item.minggu_kas?.minggu ?? 0,
+                                item.minggu_kas?.jumlah ?? 0,
+                                item.minggu_id ?? ''
+                              )}
+                              className="px-3 py-1.5 rounded-lg text-xs bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              Bayar Sekarang
+                            </motion.button>
+
+                          </>
                         )}
                         <span className={`${item.status ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-600/20 text-rose-300 border-rose-500/30'} px-3 py-1 rounded-full text-xs border` }>
                           {item.status ? 'Sudah Bayar' : 'Belum Bayar'}
@@ -640,6 +672,20 @@ export default function CashPage() {
               </div>
             </motion.div>
           </div>
+        )}
+
+        {/* Payment Modal */}
+        {showPaymentModal && selectedPaymentWeek && studentName && mahasiswaId && (
+          <PaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            onPaymentSuccess={handlePaymentSuccess}
+            mingguNumber={selectedPaymentWeek.minggu}
+            amount={selectedPaymentWeek.amount}
+            studentName={studentName}
+            mahasiswaId={mahasiswaId}
+            mingguId={selectedPaymentWeek.mingguId}
+          />
         )}
 
         {/* Summary */}
