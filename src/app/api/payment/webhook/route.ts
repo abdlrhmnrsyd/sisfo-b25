@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update payment status in database
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('payment_transactions')
       .update({
         status: status_code === '200' ? 'settlement' : 'failed',
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     // If payment is successful, update kas_status
     if (status_code === '200') {
-      const { data: paymentData } = await supabase
+      const { data: paymentData } = await supabaseAdmin
         .from('payment_transactions')
         .select('mahasiswa_id, minggu_id')
         .eq('transaction_id', order_id)
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
       if (paymentData) {
         // Update kas_status to paid
-        await supabase
+        await supabaseAdmin
           .from('kas_status')
           .update({ status: true })
           .eq('mahasiswa_id', paymentData.mahasiswa_id)

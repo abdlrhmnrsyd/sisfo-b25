@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { midtransSnapServer } from '@/lib/midtransClient';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,8 +15,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique order ID
-    const orderId = `KAS-${minggu_number}-${mahasiswa_id}-${Date.now()}`;
+    // Generate unique but short order ID (Midtrans max 50 chars)
+    const shortMahasiswa = String(mahasiswa_id).replace(/-/g, '').slice(0, 8);
+    const ts = Date.now().toString(36);
+    const orderId = `KAS-${minggu_number}-${shortMahasiswa}-${ts}`; // e.g., KAS-3-ab12cd34-lmno123
 
     // Prepare Midtrans payment parameters
     const parameter = {
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
     const transactionToken = transaction.token;
 
     // Save transaction to database
-    const { data: paymentData, error: paymentError } = await supabase
+    const { data: paymentData, error: paymentError } = await supabaseAdmin
       .from('payment_transactions')
       .insert({
         mahasiswa_id,
@@ -68,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (paymentError) {
       console.error('Error saving payment transaction:', paymentError);
       return NextResponse.json(
-        { error: 'Failed to save payment transaction' },
+        { error: 'Failed to save payment transaction', details: paymentError.message },
         { status: 500 }
       );
     }
