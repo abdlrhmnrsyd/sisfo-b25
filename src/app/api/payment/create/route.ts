@@ -57,12 +57,12 @@ export async function POST(request: NextRequest) {
           category: 'Pembayaran Kas',
         },
       ],
-        callbacks: {
-          finish: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-          pending: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/pending`,
-          error: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/error`,
-        },
-      };
+      callbacks: {
+        finish: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
+        pending: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/pending`,
+        error: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/error`,
+      },
+    };
     } else if (chosenMethod === 'va_bca' || chosenMethod === 'va_permata' || chosenMethod === 'va_bni' || chosenMethod === 'va_bri') {
       const bank = chosenMethod === 'va_bca' ? 'bca' : chosenMethod === 'va_permata' ? 'permata' : chosenMethod === 'va_bni' ? 'bni' : 'bri';
       chargeParams = {

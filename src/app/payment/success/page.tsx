@@ -25,13 +25,13 @@ export default function PaymentSuccessPage() {
             body: JSON.stringify({ transaction_id: orderId }),
           });
 
-          if (!result.success) {
+          if (!result.success || !result.data) {
             console.error('Payment status check failed:', result.error);
             setPaymentStatus('error');
             return;
           }
-
-          setPaymentStatus(result.data.status);
+          const data = result.data as { status?: string };
+          setPaymentStatus(data.status ?? 'unknown');
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
