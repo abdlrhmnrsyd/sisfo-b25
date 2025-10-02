@@ -23,7 +23,6 @@ export function getMidtransSnapServer(): unknown {
     throw new Error('Environment variable MIDTRANS_SERVER_KEY is required.');
   }
 
-  // @ts-expect-error constructor typing mismatch
   return new (Snap as unknown as { new (opts: { isProduction: boolean; serverKey: string }): unknown })({ isProduction, serverKey });
 }
 
