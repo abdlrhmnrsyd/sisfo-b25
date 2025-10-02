@@ -1,4 +1,3 @@
-// @ts-expect-error midtrans-client types are incomplete for ESM usage in some setups
 import { CoreApi, Snap } from 'midtrans-client';
 
 export function getMidtransCore() {
