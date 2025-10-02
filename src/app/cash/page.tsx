@@ -8,6 +8,7 @@ import CleanText from "../components/CleanText";
 import PaymentModal from "../components/PaymentModal";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
+import Image from "next/image";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, TooltipItem, Filler } from "chart.js";
 
 ChartJS.register(
@@ -661,7 +662,7 @@ export default function CashPage() {
                 <div className="text-xs text-slate-400">Scan QR untuk membayar kas</div>
               </div>
               <div className="rounded-xl overflow-hidden bg-slate-800 border border-slate-700 mb-4 grid place-items-center">
-                <img src={QRIS_URL} alt="QRIS" className="w-full max-w-xs object-contain" />
+                <Image src={QRIS_URL} alt="QRIS" width={300} height={300} className="w-full max-w-xs object-contain" />
               </div>
               <div className="flex items-center justify-end gap-2">
                 <motion.button

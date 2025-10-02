@@ -259,7 +259,7 @@ export default function PaymentModal({
                 </div>
               ) : (
                 <div className="text-xs text-slate-400">
-                  Klik <b>"Buat"</b> untuk generate QR pembayaran.
+                  Klik <b>&quot;Buat&quot;</b> untuk generate QR pembayaran.
                 </div>
               )}
             </>
@@ -297,7 +297,7 @@ export default function PaymentModal({
                 </div>
               ) : (
                 <div className="text-xs text-slate-400">
-                  Klik <b>"Buat"</b> untuk generate nomor VA.
+                  Klik <b>&quot;Buat&quot;</b> untuk generate nomor VA.
                 </div>
               )}
             </>
@@ -317,7 +317,7 @@ export default function PaymentModal({
                 </a>
               ) : (
                 <div className="text-xs text-slate-400">
-                  Klik <b>"Buat"</b> untuk generate tautan pembayaran.
+                  Klik <b>&quot;Buat&quot;</b> untuk generate tautan pembayaran.
                 </div>
               )}
             </>
