@@ -6,7 +6,7 @@ import Navbar from "../components/Navbar";
 import ElegantStars from "../components/ElegantStars";
 import CleanText from "../components/CleanText";
 import PaymentModal from "../components/PaymentModal";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, TooltipItem, Filler } from "chart.js";
 
@@ -99,6 +99,9 @@ export default function CashPage() {
 
   const [navbarHeight, setNavbarHeight] = useState(0);
   const handleNavbarHeightChange = (height: number) => setNavbarHeight(height);
+
+  // Initialize Supabase client
+  const supabase = getSupabaseClient();
 
   // Cookie helpers
   const setCookie = (name: string, value: string, days: number) => {

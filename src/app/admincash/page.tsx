@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type Mahasiswa = {
   id: string;
@@ -39,6 +39,7 @@ export default function AdminCashPage() {
   }, []);
 
   const fetchData = async () => {
+    const supabase = getSupabaseClient();
     const { data: mhs } = await supabase.from("mahasiswa").select("*");
     if (mhs) setMahasiswa(mhs);
 
@@ -50,6 +51,7 @@ export default function AdminCashPage() {
   };
 
   const addMingguKas = async () => {
+    const supabase = getSupabaseClient();
     const jumlahNum = parseInt(jumlah || "0", 10);
     const currentMax = mingguKas.length
       ? Math.max(...mingguKas.map((m) => m.minggu))
@@ -72,6 +74,7 @@ export default function AdminCashPage() {
   };
 
   const addPengeluaran = async () => {
+    const supabase = getSupabaseClient();
     const keluarNum = parseInt(keluar || "0", 10);
     await supabase.from("transaksi_kas").insert([
       { jenis: "pengeluaran", deskripsi, jumlah: keluarNum },
@@ -85,6 +88,7 @@ export default function AdminCashPage() {
     mingguId: string,
     status: boolean
   ) => {
+    const supabase = getSupabaseClient();
     await supabase
       .from("kas_status")
       .update({ status })

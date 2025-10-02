@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Import supabase client (keeping original data connection)
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import Navbar from "../components/Navbar";
 import ClientOnly from "../components/ClientOnly";
 import CleanText from "../components/CleanText";
@@ -133,6 +133,8 @@ const CleanButton = ({ children, active, onClick, className = "" }: { children: 
 // };
 
 export default function Home() {
+  const supabase = getSupabaseClient();
+  
   const [jadwal, setJadwal] = useState<Jadwal[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [currentTime, setCurrentTime] = useState<Date>(new Date());

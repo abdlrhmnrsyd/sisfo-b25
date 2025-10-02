@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import Navbar from "./components/Navbar";
 import CleanText from "./components/CleanText";
 import ElegantStars from "./components/ElegantStars";
