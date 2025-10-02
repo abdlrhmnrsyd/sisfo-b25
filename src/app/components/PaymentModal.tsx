@@ -108,12 +108,30 @@ export default function PaymentModal({
     }
   };
 
-  const handleDownloadQR = () => {
+  const handleDownloadQR = async () => {
     if (!qrUrl) return;
-    const link = document.createElement("a");
-    link.href = qrUrl;
-    link.download = `QRIS-Minggu-${mingguNumber}.png`;
-    link.click();
+    
+    try {
+      // Fetch the image
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `QRIS-Minggu-${mingguNumber}-${studentName.replace(/\s+/g, '_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback: open in new tab
+      window.open(qrUrl, '_blank');
+    }
   };
 
   if (!isOpen) return null;
@@ -126,7 +144,7 @@ export default function PaymentModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-[92%] sm:w-full max-w-md max-h-[90vh] overflow-y-auto p-6 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl text-left"
+        className="relative z-10 w-[95%] sm:w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl text-left"
       >
         {/* Header */}
         <div className="mb-4">
@@ -192,21 +210,49 @@ export default function PaymentModal({
             <>
               {qrUrl ? (
                 <div className="flex flex-col items-center gap-3">
-                  <div className="p-3 rounded-xl bg-white">
-                    <img
+                  <div className="p-3 rounded-xl bg-white shadow-lg">
+                    <Image
                       src={qrUrl}
                       alt="QRIS"
                       width={192}
                       height={192}
-                      className="h-48 w-48 object-contain"
+                      className="h-32 w-32 sm:h-48 sm:w-48 object-contain"
                     />
                   </div>
-                  <button
-                    onClick={handleDownloadQR}
-                    className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm"
-                  >
-                    Download QR
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={handleDownloadQR}
+                      className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm flex items-center justify-center gap-2 flex-1 sm:flex-none"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (navigator.share && qrUrl) {
+                          navigator.share({
+                            title: `QRIS Pembayaran Minggu ${mingguNumber}`,
+                            text: `QRIS untuk pembayaran kas minggu ${mingguNumber} - ${studentName}`,
+                            url: qrUrl
+                          }).catch(console.error);
+                        } else {
+                          // Fallback: copy to clipboard
+                          navigator.clipboard.writeText(qrUrl).then(() => {
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }).catch(console.error);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-slate-600 text-white hover:bg-slate-700 transition-colors text-sm flex items-center justify-center gap-2 flex-1 sm:flex-none"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                      </svg>
+                      {copied ? 'Tersalin' : 'Share'}
+                    </button>
+                  </div>
                   <div className="text-xs text-slate-400 text-center">
                     QR berlaku sementara. Selesaikan pembayaran segera.
                   </div>
@@ -291,10 +337,10 @@ export default function PaymentModal({
         )}
 
         {/* Action Button */}
-        <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-slate-900 pt-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 sticky bottom-0 bg-slate-900 pt-3 -mx-4 sm:-mx-6 px-4 sm:px-6 pb-4 sm:pb-6">
           <motion.button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-colors"
+            className="px-4 py-3 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-colors order-2 sm:order-1"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
@@ -304,7 +350,7 @@ export default function PaymentModal({
           {qrUrl || vaInfo || deeplinkUrl ? (
             <motion.button
               onClick={handleCheckStatus}
-              className="px-6 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60 flex items-center gap-2"
+              className="px-6 py-3 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 order-1 sm:order-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
@@ -317,7 +363,7 @@ export default function PaymentModal({
           ) : (
             <motion.button
               onClick={handlePayment}
-              className="px-6 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60 flex items-center gap-2"
+              className="px-6 py-3 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2 order-1 sm:order-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
