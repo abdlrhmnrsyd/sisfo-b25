@@ -13,6 +13,8 @@ type Tugas = {
 };
 
 export default function AdminTaskPage() {
+  const supabase = getSupabaseClient();
+  
   const [tugas, setTugas] = useState<Tugas[]>([]);
   const [form, setForm] = useState({
     matakuliah: "",

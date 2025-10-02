@@ -14,6 +14,8 @@ type Jadwal = {
 };
 
 export default function AdminPage() {
+  const supabase = getSupabaseClient();
+  
   const [jadwal, setJadwal] = useState<Jadwal[]>([]);
   const [form, setForm] = useState<Omit<Jadwal, "id">>({
     hari: "",

@@ -85,6 +85,8 @@ const ElegantStars = () => {
 };
 
 export default function TaskPage() {
+  const supabase = getSupabaseClient();
+  
   const [tugas, setTugas] = useState<Tugas[]>([]);
   const [navbarHeight, setNavbarHeight] = useState(0);
 

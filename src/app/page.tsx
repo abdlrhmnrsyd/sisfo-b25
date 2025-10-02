@@ -27,6 +27,8 @@ type Tugas = {
 };
 
 export default function DashboardPage() {
+  const supabase = getSupabaseClient();
+  
   const [jadwal, setJadwal] = useState<Jadwal[]>([]);
   const [tugas, setTugas] = useState<Tugas[]>([]);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
