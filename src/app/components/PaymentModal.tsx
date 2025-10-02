@@ -187,7 +187,8 @@ export default function PaymentModal({
               {qrUrl ? (
                 <div className="flex flex-col items-center gap-3">
                   <div className="p-3 rounded-xl bg-white">
-                    <Image src={qrUrl} alt="QRIS" width={192} height={192} className="h-48 w-48 object-contain" />
+                  <img src={qrUrl} alt="QRIS" width={192} height={192} className="h-48 w-48 object-contain" />
+
                   </div>
                   <div className="text-xs text-slate-400 text-center">
                     QR berlaku sementara. Selesaikan pembayaran sebelum QR kadaluarsa.
