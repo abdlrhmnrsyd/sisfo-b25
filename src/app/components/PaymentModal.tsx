@@ -58,6 +58,7 @@ export default function PaymentModal({
       if (!result.success) {
         throw new Error(result.error || 'Failed to create payment');
       }
+
       type CreateResult = {
         transaction_id: string;
         qr_url?: string | null;
@@ -107,28 +108,38 @@ export default function PaymentModal({
     }
   };
 
+  const handleDownloadQR = () => {
+    if (!qrUrl) return;
+    const link = document.createElement("a");
+    link.href = qrUrl;
+    link.download = `QRIS-Minggu-${mingguNumber}.png`;
+    link.click();
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      {/* Background overlay */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-[90%] max-w-md p-6 rounded-2xl bg-slate-900 border border-slate-700 text-left"
+        className="relative z-10 w-[92%] sm:w-full max-w-md max-h-[90vh] overflow-y-auto p-6 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl text-left"
       >
+        {/* Header */}
         <div className="mb-4">
-          <CleanText size="text-xl" className="text-white mb-2">
+          <CleanText size="text-xl" className="text-white mb-2 font-bold">
             Pembayaran Kas Minggu {mingguNumber}
           </CleanText>
-          <div className="text-sm text-slate-400">
-            {studentName}
-          </div>
+          <div className="text-sm text-slate-400">{studentName}</div>
         </div>
 
+        {/* Metode Pembayaran */}
         <div className="mb-4">
-          <div className="text-sm text-slate-300 mb-2">Metode Pembayaran</div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="text-sm text-slate-300 mb-2 font-medium">Metode Pembayaran</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {([
               { key: 'qris', label: 'QRIS', icon: '/qris.jpg' },
               { key: 'va_bca', label: 'VA BCA', icon: '/file.svg' },
@@ -150,126 +161,137 @@ export default function PaymentModal({
                   setError(null);
                   setCopied(false);
                 }}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                className={`flex flex-col sm:flex-row items-center sm:items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs sm:text-sm transition-all ${
                   method === opt.key
-                    ? 'bg-purple-600/20 border-purple-500/50 text-white'
-                    : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-700/50'
+                    ? "bg-purple-600/30 border-purple-500 text-white shadow-md"
+                    : "bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-700/70"
                 }`}
               >
-                <Image src={opt.icon} alt={opt.label} width={20} height={20} className="opacity-90" />
+                <Image src={opt.icon} alt={opt.label} width={24} height={24} className="opacity-90" />
                 <span>{opt.label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="mb-6 p-4 rounded-lg bg-slate-800/60 border border-slate-700/60">
-          <div className="flex justify-between items-center mb-2">
+        {/* Detail Pembayaran */}
+        <div className="mb-6 p-4 rounded-lg bg-slate-800/70 border border-slate-700 shadow-inner">
+          <div className="flex justify-between items-center mb-3">
             <span className="text-slate-300">Nominal:</span>
-            <span className="text-white font-semibold">
-              {new Intl.NumberFormat("id-ID", { 
-                style: "currency", 
-                currency: "IDR", 
-                maximumFractionDigits: 0 
+            <span className="text-white font-semibold text-lg">
+              {new Intl.NumberFormat("id-ID", {
+                style: "currency",
+                currency: "IDR",
+                maximumFractionDigits: 0,
               }).format(amount)}
             </span>
           </div>
-          <div className="mt-2 inline-flex items-center gap-2 text-[10px] px-2 py-1 rounded-full bg-slate-900/60 border border-slate-700/60 text-slate-400">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Aman & terenkripsi via Midtrans
-          </div>
 
-          {method === 'qris' && (
+          {/* QRIS */}
+          {method === "qris" && (
             <>
-              <div className="text-xs text-slate-400 mb-3">
-                Pembayaran via QRIS. Scan QR berikut menggunakan e-wallet/banking Anda.
-              </div>
               {qrUrl ? (
                 <div className="flex flex-col items-center gap-3">
                   <div className="p-3 rounded-xl bg-white">
-                  <img src={qrUrl} alt="QRIS" width={192} height={192} className="h-48 w-48 object-contain" />
-
+                    <img
+                      src={qrUrl}
+                      alt="QRIS"
+                      width={192}
+                      height={192}
+                      className="h-48 w-48 object-contain"
+                    />
                   </div>
+                  <button
+                    onClick={handleDownloadQR}
+                    className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors text-sm"
+                  >
+                    Download QR
+                  </button>
                   <div className="text-xs text-slate-400 text-center">
-                    QR berlaku sementara. Selesaikan pembayaran sebelum QR kadaluarsa.
+                    QR berlaku sementara. Selesaikan pembayaran segera.
                   </div>
                 </div>
               ) : (
-                <div className="text-xs text-slate-400">Klik &quot;Buat&quot; untuk generate QR pembayaran.</div>
+                <div className="text-xs text-slate-400">
+                  Klik <b>"Buat"</b> untuk generate QR pembayaran.
+                </div>
               )}
             </>
           )}
 
-          {(['va_bca','va_permata','va_bni','va_bri'].includes(method)) && (
+          {/* VA */}
+          {["va_bca", "va_permata", "va_bni", "va_bri"].includes(method) && (
             <>
-              <div className="text-xs text-slate-400 mb-3">
-                Pembayaran via Virtual Account {method.replace('va_', '').toUpperCase()}. Gunakan nomor VA berikut.
-              </div>
               {vaInfo ? (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900/60 border border-slate-700/60">
-                  <div>
-                    <div className="text-slate-400 text-xs">Bank</div>
-                    <div className="text-white font-semibold uppercase">{vaInfo.bank}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-right">
-                      <div className="text-slate-400 text-xs">Nomor VA</div>
-                      <div className="text-white font-semibold">{vaInfo.number}</div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-slate-900/70 border border-slate-700">
+                    <div>
+                      <div className="text-slate-400 text-xs">Bank</div>
+                      <div className="text-white font-semibold uppercase">{vaInfo.bank}</div>
                     </div>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(vaInfo.number);
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 1500);
-                        } catch {}
-                      }}
-                      className="px-2 py-1 rounded-md bg-slate-700 text-white text-xs hover:bg-slate-600"
-                    >
-                      {copied ? 'Tersalin' : 'Salin'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <div className="text-slate-400 text-xs">Nomor VA</div>
+                        <div className="text-white font-semibold">{vaInfo.number}</div>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(vaInfo.number);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 1500);
+                          } catch {}
+                        }}
+                        className="px-2 py-1 rounded-md bg-slate-700 text-white text-xs hover:bg-slate-600"
+                      >
+                        {copied ? "Tersalin" : "Salin"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-xs text-slate-400">Klik &quot;Buat&quot; untuk generate nomor VA.</div>
+                <div className="text-xs text-slate-400">
+                  Klik <b>"Buat"</b> untuk generate nomor VA.
+                </div>
               )}
             </>
           )}
 
-          {(method === 'gopay' || method === 'shopeepay' || method === 'dana') && (
+          {/* E-wallet */}
+          {(method === "gopay" || method === "shopeepay" || method === "dana") && (
             <>
-              <div className="text-xs text-slate-400 mb-3">
-                Pembayaran via {method === 'gopay' ? 'GoPay' : method === 'dana' ? 'DANA' : 'ShopeePay'}. Gunakan tombol di bawah untuk membuka aplikasi.
-              </div>
               {deeplinkUrl ? (
                 <a
                   href={deeplinkUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-block px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                  className="inline-block px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-center"
                 >
                   Buka Aplikasi
                 </a>
               ) : (
-                <div className="text-xs text-slate-400">Klik &quot;Buat&quot; untuk generate tautan pembayaran.</div>
+                <div className="text-xs text-slate-400">
+                  Klik <b>"Buat"</b> untuk generate tautan pembayaran.
+                </div>
               )}
             </>
           )}
         </div>
 
+        {/* Status/Error */}
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-300 text-sm">
+          <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-500/40 text-red-300 text-sm">
             {error}
           </div>
         )}
-
         {statusMessage && (
-          <div className="mb-4 p-3 rounded-lg bg-emerald-900/20 border border-emerald-500/30 text-emerald-300 text-sm">
+          <div className="mb-4 p-3 rounded-lg bg-emerald-900/20 border border-emerald-500/40 text-emerald-300 text-sm">
             {statusMessage}
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-3">
+        {/* Action Button */}
+        <div className="flex items-center justify-end gap-3 sticky bottom-0 bg-slate-900 pt-3">
           <motion.button
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-colors"
@@ -311,4 +333,3 @@ export default function PaymentModal({
     </div>
   );
 }
-
