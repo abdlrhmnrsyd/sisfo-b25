@@ -69,66 +69,110 @@ export default function PaymentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-[90%] max-w-md p-6 rounded-2xl bg-slate-900 border border-slate-700 text-left"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ type: "spring", duration: 0.4 }}
+        className="relative z-10 w-full max-w-md"
       >
-        <div className="mb-4">
-          <CleanText size="text-xl" className="text-white mb-2">
-            Pembayaran Kas Minggu {mingguNumber}
-          </CleanText>
-          <div className="text-sm text-slate-400">
-            {studentName}
+        {/* Glow effect */}
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/50 via-fuchsia-500/50 to-purple-500/50 rounded-3xl blur-xl opacity-50" />
+        
+        <div className="relative p-6 rounded-3xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/60 shadow-2xl text-left">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-600 flex items-center justify-center">
+                <span className="text-white text-lg">💳</span>
+              </div>
+              <div>
+                <CleanText size="text-2xl" className="text-white font-bold">
+                  Pembayaran Kas
+                </CleanText>
+                <div className="text-xs text-slate-400">
+                  Minggu {mingguNumber}
+                </div>
+              </div>
+            </div>
+            <div className="text-sm text-slate-300 mt-2">
+              {studentName}
+            </div>
           </div>
-        </div>
 
-        <div className="mb-6 p-4 rounded-lg bg-slate-800/60 border border-slate-700/60">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-slate-300">Nominal:</span>
-            <span className="text-white font-semibold">
-              {new Intl.NumberFormat("id-ID", { 
-                style: "currency", 
-                currency: "IDR", 
-                maximumFractionDigits: 0 
-              }).format(amount)}
-            </span>
+          {/* Amount Card */}
+          <div className="mb-6 p-5 rounded-2xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/60 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -mr-16 -mt-16" />
+            <div className="relative">
+              <div className="text-xs text-slate-400 mb-2">Nominal Pembayaran</div>
+              <div className="text-3xl font-bold text-white mb-1">
+                {new Intl.NumberFormat("id-ID", { 
+                  style: "currency", 
+                  currency: "IDR", 
+                  maximumFractionDigits: 0 
+                }).format(amount)}
+              </div>
+              <div className="text-xs text-slate-400 flex items-center gap-1 mt-2">
+                <span>🔒</span>
+                <span>Pembayaran aman melalui Midtrans</span>
+              </div>
+            </div>
           </div>
-          <div className="text-xs text-slate-400">
-            Pembayaran akan diproses melalui Midtrans
-          </div>
-        </div>
 
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-300 text-sm">
-            {error}
-          </div>
-        )}
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-4 rounded-xl bg-red-900/20 border border-red-500/30 text-red-300 text-sm"
+            >
+              <div className="flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{error}</span>
+              </div>
+            </motion.div>
+          )}
 
-        <div className="flex items-center justify-end gap-3">
-          <motion.button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600 transition-colors"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={isLoading}
-          >
-            Batal
-          </motion.button>
-          <motion.button
-            onClick={handlePayment}
-            className="px-6 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-60 flex items-center gap-2"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={isLoading}
-          >
-            {isLoading && (
-              <span className="inline-block h-4 w-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
-            )}
-            {isLoading ? "Memproses..." : "Bayar Sekarang"}
-          </motion.button>
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <motion.button
+              onClick={onClose}
+              className="flex-1 px-4 py-3 rounded-xl bg-slate-700/80 text-white font-semibold hover:bg-slate-600/80 transition-all border border-slate-600/50"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+            >
+              Batal
+            </motion.button>
+            <motion.button
+              onClick={handlePayment}
+              className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-purple-600 text-white font-semibold hover:from-purple-700 hover:via-fuchsia-700 hover:to-purple-700 transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-60 flex items-center justify-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="inline-block h-4 w-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                  <span>Memproses...</span>
+                </>
+              ) : (
+                <>
+                  <span>💳</span>
+                  <span>Bayar Sekarang</span>
+                </>
+              )}
+            </motion.button>
+          </div>
         </div>
       </motion.div>
     </div>
