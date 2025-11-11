@@ -13,7 +13,8 @@ const snapConfig: { isProduction: boolean; serverKey: string } = {
   isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
   serverKey: process.env.MIDTRANS_SERVER_KEY!,
 };
-// @ts-expect-error constructor typing mismatch
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// @ts-expect-error constructor typing mismatch - Snap constructor signature doesn't match our config
 export const midtransSnapServer = new (Snap as any)(snapConfig);
 
 // Types for payment
