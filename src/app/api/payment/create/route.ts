@@ -1,9 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { midtransSnapServer } from '@/lib/midtransClient';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+
+// Helper to safely get supabaseAdmin
+function getSupabaseAdmin() {
+  try {
+    // Check environment variables first
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set in environment variables');
+    }
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set in environment variables');
+    }
+    
+    // Dynamic import to catch errors
+    const { supabaseAdmin } = require('@/lib/supabaseAdmin');
+    return supabaseAdmin;
+  } catch (error) {
+    console.error('Supabase Admin initialization error:', error);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
+    
+    // Check if supabaseAdmin is initialized
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error',
+          details: 'SUPABASE_SERVICE_ROLE_KEY is missing. Please add it to your .env.local file and restart the server.'
+        },
+        { status: 500 }
+      );
+    }
     const body = await request.json();
     const { mahasiswa_id, minggu_id, amount, minggu_number, student_name } = body;
 

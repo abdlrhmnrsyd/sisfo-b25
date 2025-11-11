@@ -1,9 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+
+// Helper to safely get supabaseAdmin
+function getSupabaseAdmin() {
+  try {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      return null;
+    }
+    const { supabaseAdmin } = require('@/lib/supabaseAdmin');
+    return supabaseAdmin;
+  } catch (error) {
+    console.error('Supabase Admin initialization error:', error);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
+    
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error',
+          details: 'SUPABASE_SERVICE_ROLE_KEY is missing'
+        },
+        { status: 500 }
+      );
+    }
     const body = await request.json();
     const { order_id, status_code, gross_amount, signature_key } = body;
 
