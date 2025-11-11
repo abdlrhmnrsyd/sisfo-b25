@@ -1,4 +1,3 @@
-// @ts-expect-error midtrans-client types are incomplete for ESM usage in some setups
 import { CoreApi, Snap } from 'midtrans-client';
 
 // Core API for status/capture/refund checks (server-side)
@@ -14,7 +13,6 @@ const snapConfig: { isProduction: boolean; serverKey: string } = {
   serverKey: process.env.MIDTRANS_SERVER_KEY!,
 };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-// @ts-expect-error constructor typing mismatch - Snap constructor signature doesn't match our config
 export const midtransSnapServer = new (Snap as any)(snapConfig);
 
 // Types for payment
