@@ -5,6 +5,13 @@ import { motion } from "framer-motion";
 import CleanText from "./CleanText";
 import { safeApiCall } from "@/lib/apiUtils";
 
+interface PaymentCreateResponse {
+  token: string;
+  redirect_url: string;
+  transaction_id: string;
+  payment_id: string;
+}
+
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -34,7 +41,7 @@ export default function PaymentModal({
     setError(null);
 
     try {
-      const result = await safeApiCall('/api/payment/create', {
+      const result = await safeApiCall<PaymentCreateResponse>('/api/payment/create', {
         method: 'POST',
         body: JSON.stringify({
           mahasiswa_id: mahasiswaId,
@@ -45,7 +52,7 @@ export default function PaymentModal({
         }),
       });
 
-      if (!result.success) {
+      if (!result.success || !result.data) {
         throw new Error(result.error || 'Failed to create payment');
       }
 

@@ -7,6 +7,12 @@ import CleanText from "../../components/CleanText";
 import ElegantStars from "../../components/ElegantStars";
 import { safeApiCall } from "@/lib/apiUtils";
 
+interface PaymentStatusResponse {
+  status: string;
+  fraud_status?: string;
+  gross_amount?: number;
+}
+
 export default function PaymentSuccessPage() {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
@@ -20,12 +26,12 @@ export default function PaymentSuccessPage() {
         const orderId = urlParams.get('order_id');
         
         if (orderId) {
-          const result = await safeApiCall('/api/payment/status', {
+          const result = await safeApiCall<PaymentStatusResponse>('/api/payment/status', {
             method: 'POST',
             body: JSON.stringify({ transaction_id: orderId }),
           });
 
-          if (!result.success) {
+          if (!result.success || !result.data) {
             console.error('Payment status check failed:', result.error);
             setPaymentStatus('error');
             return;
