@@ -154,7 +154,7 @@ export default function AdminTaskPage() {
               onClick={handleCancelEdit}
               className="bg-gray-600 hover:bg-gray-700 p-3 rounded-lg text-lg font-semibold flex-1 transition-all duration-200"
             >
-              Batalkan
+              Cancel
             </button>
           </div>
         ) : (
